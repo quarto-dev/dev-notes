@@ -3,8 +3,3 @@
 # freeze computational output
 # (see https://quarto.org/docs/projects/code-execution.html#freeze)
 freeze: true
-echo: false
-author: Carlos Scheidegger
-
-# Enable banner style title blocks
-title-block-banner: true
