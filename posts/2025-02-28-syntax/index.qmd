@@ -1,0 +1,58 @@
+---
+title: A stand-alone surface syntax defintion for Quarto
+date: 2025-02-28
+author: Carlos
+categories:
+  - syntax
+---
+
+## Requirements
+
+Our current reader is too slow, buggy, and hard to extend. If we commit to maintaining
+our own code path that translates Markdown to Pandoc's AST, we get performance _and_ we no
+longer have to worry about syntax incompatibility.
+
+Specifically, Quarto adds shortcodes `{{{< like this >}}}` and code blocks
+
+````
+```{{python}}
+print("like this")
+```
+````
+
+These need to be handled before Pandoc sees the input stream.
+
+## Current plan
+
+We're going to fork https://github.com/tree-sitter-grammars/tree-sitter-markdown/.
+
+We'll use this to create a standalone Rust binary that takes .qmd input and produces
+either Pandoc JSON or Pandoc `native` format.
+
+## Opportunities
+
+Quarto relied in large part (and still does) on using Lua Pandoc filters for custom syntax.
+That limits the type of syntax that can be easily supported, and as a consequence our current syntax is inconsistent in a number of ways.
+
+For example, code blocks have attributes declared at the start bracket:
+
+````
+```{#id .class key=value}
+content
+```
+````
+
+But equation blocks have attributes declared at the _end_:
+
+```
+$$
+e = mc^2
+$$ {#eq-special-relativity}
+```
+
+And, inline equations do not support attributes at all.
+
+Similarly, inline executable code cells have the language attribute declared inside the ticks,
+code non-executable inline code elements have attributes declared outside the ticks.
+We could improve all of this.
+
