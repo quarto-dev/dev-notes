@@ -1,80 +1,10 @@
 [
   {
-    "objectID": "perf/summary.html",
-    "href": "perf/summary.html",
-    "title": "Summary so far",
+    "objectID": "posts/2025-01-31-c/index.html",
+    "href": "posts/2025-01-31-c/index.html",
+    "title": "Lua win: remove normalize-3",
     "section": "",
-    "text": "Error : The fig.showtext code chunk option must be TRUE\n\n\n\n\n\n\n\n\nFigure 1: The total runtime of quarto render on quarto-dev/quarto-web.\n\n\n\n\n\n\n\n\n\n\n\n\n\ndate\ntime\n\n\n\n\n2024-11-26\n175.8\n\n\n2025-01-24\n167.8\n\n\n2025-01-29\n162.3\n\n\n2025-01-30\n161.0\n\n\n2025-01-31\n158.6\n\n\n2025-02-18\n156.3"
-  },
-  {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Quarto development notes",
-    "section": "",
-    "text": "A smaller win than expected, and some ideas.\n\n\n\nperformance\n\nlua\n\n\n\n\n\n\n\n\n\nFeb 18, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nstrange behavior with projectMetadataForInputFile\n\n\n\nperformance\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nLua win: remove normalize-3\n\n\n\nperformance\n\nlua\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nMore TS attempts\n\n\n\nperformance\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\ncloneDeep avoidance\n\n\n\nperformance\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 30, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nCaching and TS profiling observations\n\n\n\nperformance\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 29, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nImplementing a general-purpose project cache\n\n\n\nperformance\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 28, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nHashing Performance\n\n\n\nperformance\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 26, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nAn early win for jog in scoped resolution\n\n\n\nperformance\n\nlua\n\n\n\n\n\n\n\n\n\nJan 24, 2025\n\n\nCarlos\n\n\n\n\n\nNo matching items"
-  },
-  {
-    "objectID": "posts/2025-01-24/index.html",
-    "href": "posts/2025-01-24/index.html",
-    "title": "An early win for jog in scoped resolution",
-    "section": "",
-    "text": "A win from using jog for one of our filters:\n\nBefore: 53da9da\nAfter: bf5bc5a\n\n\n\n\n\n\n\n\n\nFigure 1: Runtimes by filter on quarto-web before moving to jog.\n\n\n\n\n\n\n\n\n\n\n\n\n\nFigure 2: Runtimes by filter on quarto-web after moving to jog."
-  },
-  {
-    "objectID": "posts/2025-02-18/index.html",
-    "href": "posts/2025-02-18/index.html",
-    "title": "A smaller win than expected, and some ideas.",
-    "section": "",
-    "text": "The change in commit 0f38bf1 merged a filter but produced smaller wins than I expected.\nThe portion of the code that takes a long time to run is likely to be the Blocks filter."
-  },
-  {
-    "objectID": "posts/2025-02-18/index.html#updates",
-    "href": "posts/2025-02-18/index.html#updates",
-    "title": "A smaller win than expected, and some ideas.",
-    "section": "updates",
-    "text": "updates\n\n12:00PM\nTalking with Christophe, we’ve identified that this Blocks filter is no longer necessary, and we’ll remove it.\n\n\n12:48PM\nRemoving the entire astpipeline_process_tables filter doesn’t always yield a performance win?! The only theory I have for this phenomenon for now is that this is the first filter that is ever executed against the AST and there might be some FFI overhead in touching the nodes.\n\n\n1:15PM\nthe stripNotes() functionality in normalize.lua appears to take a fairly long time. Let’s try to remove it.\n\n1:45PM\nThis worked - we’re now at 12.2% overall improvement since starting perf work.\n\n\n\n6:30PM\nAfter rescaling the plot of measured filter time to seconds, I noticed that it registered a grand total of 28.18634 seconds when the wall time of rendering quarto-web was 153 seconds.\nThis is a bit of a mystery when we take into account that Pandoc is presumably taking over half the time of the website rendering; is filtering less than a third of the total Pandoc time??\nSo I ran the following experiment: I commented out all of the filters in Quarto and ran quarto render on quarto-web. The output is of course broken, but the total run-time was 126.5 seconds. 153 - 126 = 27, which is perfectly consistent with the 28.18s amount.\nSo maybe yes, the Pandoc runtime is not due to filters so much anymore.\nI then went one step further and forced Pandoc to emit an empty document. The total runtime now is 117.3s. So the combined runtime of the HTML writer and (some of the) postprocessors is about 9.2s.\nFrom there, I then changed the reader to not produce any input. The total runtime now was 83.6s. So the reader (in between readqmd and the markdown reading) is taking 33.7s, more than the filters themselves!\nLOOK INTO THIS: Weirdly, blog posts still take a half second or so to render per post.\nAfter that, I removed all of the import() calls. That brought the runtime to 77.7s. So loading the Lua files takes 5.9s.\nAfter some more iterations of this “ablation” process, I got the following figures:\n\nPandoc: 76.9s (49.8%)\n\nfilters: 28.1s (18.1%)\nreading: 33.7s (21.7%)\n\nreadqmd: 13.8s ( 8.9%)\nparsing: 19.9s (12.8%)\n\nwriting: 9.2s ( 5.9%)\nloading Lua: 5.9s ( 3.8%)\n\nnon-Pandoc: 77.7s (50.2%)\ntotal: 154.6s\n\nThe total time under this accounting is 154.6s, which is pretty close to the previous total measurement of 156.3s."
-  },
-  {
-    "objectID": "posts/2025-02-18/index.html#next",
-    "href": "posts/2025-02-18/index.html#next",
-    "title": "A smaller win than expected, and some ideas.",
-    "section": "Next",
-    "text": "Next\nSo the next perf project for me should be to go work on an external fast tool for converting Quarto’s surface syntax to Pandoc’s AST."
-  },
-  {
-    "objectID": "posts/2025-01-30/index.html",
-    "href": "posts/2025-01-30/index.html",
-    "title": "cloneDeep avoidance",
-    "section": "",
-    "text": "Logging an idea for future use: we need to avoid cloneDeeping large structures. It has caused bugs in the past and is the source of performance issues.\nOne way to address this is to create a proxy object that forbids mutation, remove the cloneDeep call, and run our test suite. Rinse, repeat."
-  },
-  {
-    "objectID": "posts/2025-01-28/index.html",
-    "href": "posts/2025-01-28/index.html",
-    "title": "Implementing a general-purpose project cache",
-    "section": "",
-    "text": "I’ve implemented a disk cache and started using it on some of our slow, stable computations (such as the analysis of SCSS files).\nThis work is on the feature/project-cache branch."
-  },
-  {
-    "objectID": "posts/2025-01-26/index.html",
-    "href": "posts/2025-01-26/index.html",
-    "title": "Hashing Performance",
-    "section": "",
-    "text": "In the course of 1.7’s perf work, we are going to introduce a number of persistent caches for Quarto projects. This will require knowing which hashing functions perform well under what settings. I’m using this file to measure the results.\nFigure 1: Runtimes of different hashing algorithms in Deno\nImportant features:"
-  },
-  {
-    "objectID": "posts/2025-01-26/index.html#takeaways",
-    "href": "posts/2025-01-26/index.html#takeaways",
-    "title": "Hashing Performance",
-    "section": "Takeaways",
-    "text": "Takeaways\n\nblueimp-md5 only makes sense if sync MD5 calls are necessary: it’s slower than md5 at every range.\nmd5 only makes sense if the quality improvement over djb2 is needed, but sha256 not being required:\n\nthe DJB2 algorithm gives ~32 bits of hashing space, birthday paradoxes start appearing at 2^16 items, while MD5 gives 128 bits.\nmd5 is, adversarially, trivially breakable\n\nsha256 is async and has a large startup cost, but is the fastest at strings starting at size ~2^14 = 16k, faster even than djb2."
-  },
-  {
-    "objectID": "posts/2025-01-26/index.html#a-design-for-a-general-purpose-cache",
-    "href": "posts/2025-01-26/index.html#a-design-for-a-general-purpose-cache",
-    "title": "Hashing Performance",
-    "section": "A design for a general-purpose cache?",
-    "text": "A design for a general-purpose cache?\nIf we need cryptographically-safe hashes, then we need to use SHA-256 everywhere. Unfortunately, that incurs ~15ms of overhead per call independently of the size of the string. That’s a lot.\nIf djb2 is good enough in terms of quality, then we still need to worry about hash space size. djb2 has 32 bits of address space. By the birthday paradox, if we want a 1 in a million chance of a hash collision, then the cache size needs to be at most ~100.\nHonestly, this number is small enough that I’m wary about using djb2 at all in Quarto as a substitute for string equality.\nIf we could create a 64-bit version of djb2, that would likely suffice for Quarto documents: the critical size for such caches to achieve a 1-in-a-million catastrophic failure is ~6 million.\nmd5 has 128 bits, and in non-adversarial settings that’s plenty.\nThe penalty of using md5 is about 50%, and the requirement for using async:\n\n\n\n\n\n\n\n\n\nThat’s a completely acceptable tradeoff.\nSo, I think our general-purpose cache is:\n\nuse md5 or sha256, whichever is faster. The breakpoint where sha256 is clearly it is at string sizes of around 16k or larger.\nthis cache will be necessarily async."
+    "text": "Up to commit ca05876, Quarto had a three-stage filter for parsing custom AST nodes. The last stage existed to fix a bug, but turned out to be quite onerous in terms of overall performance.\nCommit 5aaaff0 rewrites the fix to happen inside the parsing itself. The result is a 1.5% overall reduction in rendering quarto-web."
   },
   {
     "objectID": "posts/2025-01-29/index.html",
@@ -98,25 +28,60 @@
     "text": "TS performance profiles\nThis is the profile data we’re using: CPU-20250129T083238.cpuprofile.\nTo look at this data yourself, you’ll need Google Chrome. Open the DevTools, click on the Performance tab, and then “Load Profile” (the fourth button from the left, an icon with an arrow pointing up from a tray)."
   },
   {
-    "objectID": "posts/2025-01-31/index.html",
-    "href": "posts/2025-01-31/index.html",
-    "title": "strange behavior with projectMetadataForInputFile",
+    "objectID": "posts/2025-02-28-syntax/index.html",
+    "href": "posts/2025-02-28-syntax/index.html",
+    "title": "A stand-alone surface syntax definition for Quarto",
     "section": "",
-    "text": "I identified in a profile that projectMetadataForInputFile was taking a relatively long time.\nThis function checks the contents of a metadata object (a nested JSON record) for values that might look like paths by trying to find files in the file system that exist when the string value is interpreted as a path relative to a given directory.\nThis seems like a good candidate for improvement because we call this function repeatedly throughout quarto render, and although the function has a local inner cache for existsSync calls, we make still repeated calls to projectMetadataForInputFile throughout.\nSo I implemented a simple memoization strategy for the function. The results are baffling. The cache hurts total runtime, and by a lot. (about 5/180s, just over 3%).\nI can’t explain it. The function looks like this (the code on main is slightly different, because we haven’t merged the in-memory cache at this point).\nconst memoryCacheKey =\n  `projectMetadataForInputFile/project-config/${inputDir}`;\n// this is the cache lookup\nconst lookup = project.memoryCache[memoryCacheKey];\nif (lookup) {\n  return ld.cloneDeep(lookup as Metadata);\n}\n// this is the slow call\nconst result = toInputRelativePaths(\n  projectType(project.config?.project?.[kProjectType]),\n  project.dir,\n  dirname(input),\n  ld.cloneDeep(project.config),\n) as Metadata;\n// we store the result here\nproject.memoryCache[memoryCacheKey] = result;\nreturn result;\n\nNotes\n\nI’ve measured the total time taken by the slow call and the storing of the value through performance.now(). Storing the value is supposedly (and unsurprisingly) taking much less time than the call to toInputRelativePaths\nAdding the storing of the value without referencing or using it is enough to make the measured wall-clock time slower, in direct contradiction to the above.\nAdding the lookup of the value without ever storing anything in the cache is not enough to make the measured wall-clock time slower.\nThe keys are small (on the order of 200 bytes) and the stored objects are larger, but not big (their JSON representation is on the order of 20k)\nThe slowdown happens independently of using Record&lt;string, string&gt; or Map&lt;string, string&gt;: I’ve tried both.\nThe call to ld.cloneDeep in retrieving the result doesn’t materially affect the total time. I added it because I suspect that something downstream is causing the problem, but I can’t figure out what it is."
+    "text": "Our current reader is too slow, buggy, and hard to extend. If we commit to maintaining our own code path that translates Markdown to Pandoc’s AST, we get performance and we no longer have to worry about syntax incompatibility.\nSpecifically, Quarto adds shortcodes {{&lt; like this &gt;}} and code blocks\n```{python}\nprint(\"like this\")\n```\nThese need to be handled before Pandoc sees the input stream."
   },
   {
-    "objectID": "posts/2025-01-31-c/index.html",
-    "href": "posts/2025-01-31-c/index.html",
-    "title": "Lua win: remove normalize-3",
+    "objectID": "posts/2025-02-28-syntax/index.html#requirements",
+    "href": "posts/2025-02-28-syntax/index.html#requirements",
+    "title": "A stand-alone surface syntax definition for Quarto",
     "section": "",
-    "text": "Up to commit ca05876, Quarto had a three-stage filter for parsing custom AST nodes. The last stage existed to fix a bug, but turned out to be quite onerous in terms of overall performance.\nCommit 5aaaff0 rewrites the fix to happen inside the parsing itself. The result is a 1.5% overall reduction in rendering quarto-web."
+    "text": "Our current reader is too slow, buggy, and hard to extend. If we commit to maintaining our own code path that translates Markdown to Pandoc’s AST, we get performance and we no longer have to worry about syntax incompatibility.\nSpecifically, Quarto adds shortcodes {{&lt; like this &gt;}} and code blocks\n```{python}\nprint(\"like this\")\n```\nThese need to be handled before Pandoc sees the input stream."
   },
   {
-    "objectID": "posts/2025-01-31-b/index.html",
-    "href": "posts/2025-01-31-b/index.html",
-    "title": "More TS attempts",
+    "objectID": "posts/2025-02-28-syntax/index.html#current-plan",
+    "href": "posts/2025-02-28-syntax/index.html#current-plan",
+    "title": "A stand-alone surface syntax definition for Quarto",
+    "section": "Current plan",
+    "text": "Current plan\nWe’re going to fork https://github.com/tree-sitter-grammars/tree-sitter-markdown/.\nWe’ll use this to create a standalone Rust binary that takes .qmd input and produces either Pandoc JSON or Pandoc native format."
+  },
+  {
+    "objectID": "posts/2025-02-28-syntax/index.html#opportunities",
+    "href": "posts/2025-02-28-syntax/index.html#opportunities",
+    "title": "A stand-alone surface syntax definition for Quarto",
+    "section": "Opportunities",
+    "text": "Opportunities\nQuarto relied in large part (and still does) on using Lua Pandoc filters for custom syntax. That limits the type of syntax that can be easily supported, and as a consequence our current syntax is inconsistent in a number of ways.\nFor example, code blocks have attributes declared at the start bracket:\n```{#id .class key=value}\ncontent\n```\nBut equation blocks have attributes declared at the end:\n$$\ne = mc^2\n$$ {#eq-special-relativity}\nAnd, inline equations do not support attributes at all.\nSimilarly, inline executable code cells have the language attribute declared inside the ticks, code non-executable inline code elements have attributes declared outside the ticks. We could improve all of this."
+  },
+  {
+    "objectID": "posts/2025-01-28/index.html",
+    "href": "posts/2025-01-28/index.html",
+    "title": "Implementing a general-purpose project cache",
     "section": "",
-    "text": "For these measurements, I’m using a machine where quarto render on quarto-web takes about 240s to render on 359 files.\nSome functions I’ve inspected and considered optimizing today:\n\n\n\nname\ntime per call\nnumber of calls\nupper bound on perf win\n\n\n\n\nresolveBootstrapScss\n1.8ms\n#files\n0.26%\n\n\ncleanSourceMappingUrl\n2.3ms\n#files\n0.34%\n\n\nextensionContext.find\n2.7ms\n#files\n0.4%\n\n\n\nI think there’s not a lot to be done here for now, and I should go back to Pandoc+Lua."
+    "text": "I’ve implemented a disk cache and started using it on some of our slow, stable computations (such as the analysis of SCSS files).\nThis work is on the feature/project-cache branch."
+  },
+  {
+    "objectID": "posts/2025-01-24/index.html",
+    "href": "posts/2025-01-24/index.html",
+    "title": "An early win for jog in scoped resolution",
+    "section": "",
+    "text": "A win from using jog for one of our filters:\n\nBefore: 53da9da\nAfter: bf5bc5a\n\n\n\n\n\n\n\n\n\nFigure 1: Runtimes by filter on quarto-web before moving to jog.\n\n\n\n\n\n\n\n\n\n\n\n\n\nFigure 2: Runtimes by filter on quarto-web after moving to jog."
+  },
+  {
+    "objectID": "perf/summary.html",
+    "href": "perf/summary.html",
+    "title": "Summary so far",
+    "section": "",
+    "text": "Error : The fig.showtext code chunk option must be TRUE\n\n\n\n\n\n\n\n\nFigure 1: The total runtime of quarto render on quarto-dev/quarto-web.\n\n\n\n\n\n\n\n\n\n\n\n\n\ndate\ntime\n\n\n\n\n2024-11-26\n175.8\n\n\n2025-01-24\n167.8\n\n\n2025-01-29\n162.3\n\n\n2025-01-30\n161.0\n\n\n2025-01-31\n158.6\n\n\n2025-02-18\n156.3"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Quarto development notes",
+    "section": "",
+    "text": "A stand-alone surface syntax definition for Quarto\n\n\n\n\n\n\nsyntax\n\n\n\n\n\n\n\n\n\nFeb 28, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nA smaller win than expected, and some ideas.\n\n\n\n\n\n\nperformance\n\n\nlua\n\n\n\n\n\n\n\n\n\nFeb 18, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nstrange behavior with projectMetadataForInputFile\n\n\n\n\n\n\nperformance\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nMore TS attempts\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nLua win: remove normalize-3\n\n\n\n\n\n\nperformance\n\n\nlua\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\ncloneDeep avoidance\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 30, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nCaching and TS profiling observations\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 29, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nImplementing a general-purpose project cache\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 28, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nHashing Performance\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 26, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nAn early win for jog in scoped resolution\n\n\n\n\n\n\nperformance\n\n\nlua\n\n\n\n\n\n\n\n\n\nJan 24, 2025\n\n\nCarlos\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "about.html",
@@ -124,5 +89,68 @@
     "title": "About",
     "section": "",
     "text": "These are internal notes we, the Quarto devs, are writing.\n\n\n\n\n\n\nImportant\n\n\n\nWe’re using these notes as external shared memory. We truly mean the following: we make no promises that anything here will make sense to anyone else!\n\n\nThink of the silly “if you’re not embarrassed by your first iteration, you took too long to ship” saying. We’re truly putting that to the test here.\nWe’re making these notes public because it’s easier for us to collect them between ourselves in this way than not to.\nYou’re welcome to read them! But if you’re not a Quarto developer (eg, you have a commit to quarto-dev/quarto or quarto-dev/quarto-cli under your name), we unfortunately won’t have time to take your read your feedback."
+  },
+  {
+    "objectID": "posts/2025-02-18/index.html",
+    "href": "posts/2025-02-18/index.html",
+    "title": "A smaller win than expected, and some ideas.",
+    "section": "",
+    "text": "The change in commit 0f38bf1 merged a filter but produced smaller wins than I expected.\nThe portion of the code that takes a long time to run is likely to be the Blocks filter."
+  },
+  {
+    "objectID": "posts/2025-02-18/index.html#updates",
+    "href": "posts/2025-02-18/index.html#updates",
+    "title": "A smaller win than expected, and some ideas.",
+    "section": "updates",
+    "text": "updates\n\n12:00PM\nTalking with Christophe, we’ve identified that this Blocks filter is no longer necessary, and we’ll remove it.\n\n\n12:48PM\nRemoving the entire astpipeline_process_tables filter doesn’t always yield a performance win?! The only theory I have for this phenomenon for now is that this is the first filter that is ever executed against the AST and there might be some FFI overhead in touching the nodes.\n\n\n1:15PM\nthe stripNotes() functionality in normalize.lua appears to take a fairly long time. Let’s try to remove it.\n\n1:45PM\nThis worked - we’re now at 12.2% overall improvement since starting perf work.\n\n\n\n6:30PM\nAfter rescaling the plot of measured filter time to seconds, I noticed that it registered a grand total of 28.18634 seconds when the wall time of rendering quarto-web was 153 seconds.\nThis is a bit of a mystery when we take into account that Pandoc is presumably taking over half the time of the website rendering; is filtering less than a third of the total Pandoc time??\nSo I ran the following experiment: I commented out all of the filters in Quarto and ran quarto render on quarto-web. The output is of course broken, but the total run-time was 126.5 seconds. 153 - 126 = 27, which is perfectly consistent with the 28.18s amount.\nSo maybe yes, the Pandoc runtime is not due to filters so much anymore.\nI then went one step further and forced Pandoc to emit an empty document. The total runtime now is 117.3s. So the combined runtime of the HTML writer and (some of the) postprocessors is about 9.2s.\nFrom there, I then changed the reader to not produce any input. The total runtime now was 83.6s. So the reader (in between readqmd and the markdown reading) is taking 33.7s, more than the filters themselves!\nLOOK INTO THIS: Weirdly, blog posts still take a half second or so to render per post.\nAfter that, I removed all of the import() calls. That brought the runtime to 77.7s. So loading the Lua files takes 5.9s.\nAfter some more iterations of this “ablation” process, I got the following figures:\n\nPandoc: 76.9s (49.8%)\n\nfilters: 28.1s (18.1%)\nreading: 33.7s (21.7%)\n\nreadqmd: 13.8s ( 8.9%)\nparsing: 19.9s (12.8%)\n\nwriting: 9.2s ( 5.9%)\nloading Lua: 5.9s ( 3.8%)\n\nnon-Pandoc: 77.7s (50.2%)\ntotal: 154.6s\n\nThe total time under this accounting is 154.6s, which is pretty close to the previous total measurement of 156.3s."
+  },
+  {
+    "objectID": "posts/2025-02-18/index.html#next",
+    "href": "posts/2025-02-18/index.html#next",
+    "title": "A smaller win than expected, and some ideas.",
+    "section": "Next",
+    "text": "Next\nSo the next perf project for me should be to go work on an external fast tool for converting Quarto’s surface syntax to Pandoc’s AST."
+  },
+  {
+    "objectID": "posts/2025-01-31/index.html",
+    "href": "posts/2025-01-31/index.html",
+    "title": "strange behavior with projectMetadataForInputFile",
+    "section": "",
+    "text": "I identified in a profile that projectMetadataForInputFile was taking a relatively long time.\nThis function checks the contents of a metadata object (a nested JSON record) for values that might look like paths by trying to find files in the file system that exist when the string value is interpreted as a path relative to a given directory.\nThis seems like a good candidate for improvement because we call this function repeatedly throughout quarto render, and although the function has a local inner cache for existsSync calls, we make still repeated calls to projectMetadataForInputFile throughout.\nSo I implemented a simple memoization strategy for the function. The results are baffling. The cache hurts total runtime, and by a lot. (about 5/180s, just over 3%).\nI can’t explain it. The function looks like this (the code on main is slightly different, because we haven’t merged the in-memory cache at this point).\nconst memoryCacheKey =\n  `projectMetadataForInputFile/project-config/${inputDir}`;\n// this is the cache lookup\nconst lookup = project.memoryCache[memoryCacheKey];\nif (lookup) {\n  return ld.cloneDeep(lookup as Metadata);\n}\n// this is the slow call\nconst result = toInputRelativePaths(\n  projectType(project.config?.project?.[kProjectType]),\n  project.dir,\n  dirname(input),\n  ld.cloneDeep(project.config),\n) as Metadata;\n// we store the result here\nproject.memoryCache[memoryCacheKey] = result;\nreturn result;\n\nNotes\n\nI’ve measured the total time taken by the slow call and the storing of the value through performance.now(). Storing the value is supposedly (and unsurprisingly) taking much less time than the call to toInputRelativePaths\nAdding the storing of the value without referencing or using it is enough to make the measured wall-clock time slower, in direct contradiction to the above.\nAdding the lookup of the value without ever storing anything in the cache is not enough to make the measured wall-clock time slower.\nThe keys are small (on the order of 200 bytes) and the stored objects are larger, but not big (their JSON representation is on the order of 20k)\nThe slowdown happens independently of using Record&lt;string, string&gt; or Map&lt;string, string&gt;: I’ve tried both.\nThe call to ld.cloneDeep in retrieving the result doesn’t materially affect the total time. I added it because I suspect that something downstream is causing the problem, but I can’t figure out what it is."
+  },
+  {
+    "objectID": "posts/2025-01-26/index.html",
+    "href": "posts/2025-01-26/index.html",
+    "title": "Hashing Performance",
+    "section": "",
+    "text": "In the course of 1.7’s perf work, we are going to introduce a number of persistent caches for Quarto projects. This will require knowing which hashing functions perform well under what settings. I’m using this file to measure the results.\nFigure 1: Runtimes of different hashing algorithms in Deno\nImportant features:"
+  },
+  {
+    "objectID": "posts/2025-01-26/index.html#takeaways",
+    "href": "posts/2025-01-26/index.html#takeaways",
+    "title": "Hashing Performance",
+    "section": "Takeaways",
+    "text": "Takeaways\n\nblueimp-md5 only makes sense if sync MD5 calls are necessary: it’s slower than md5 at every range.\nmd5 only makes sense if the quality improvement over djb2 is needed, but sha256 not being required:\n\nthe DJB2 algorithm gives ~32 bits of hashing space, birthday paradoxes start appearing at 2^16 items, while MD5 gives 128 bits.\nmd5 is, adversarially, trivially breakable\n\nsha256 is async and has a large startup cost, but is the fastest at strings starting at size ~2^14 = 16k, faster even than djb2."
+  },
+  {
+    "objectID": "posts/2025-01-26/index.html#a-design-for-a-general-purpose-cache",
+    "href": "posts/2025-01-26/index.html#a-design-for-a-general-purpose-cache",
+    "title": "Hashing Performance",
+    "section": "A design for a general-purpose cache?",
+    "text": "A design for a general-purpose cache?\nIf we need cryptographically-safe hashes, then we need to use SHA-256 everywhere. Unfortunately, that incurs ~15ms of overhead per call independently of the size of the string. That’s a lot.\nIf djb2 is good enough in terms of quality, then we still need to worry about hash space size. djb2 has 32 bits of address space. By the birthday paradox, if we want a 1 in a million chance of a hash collision, then the cache size needs to be at most ~100.\nHonestly, this number is small enough that I’m wary about using djb2 at all in Quarto as a substitute for string equality.\nIf we could create a 64-bit version of djb2, that would likely suffice for Quarto documents: the critical size for such caches to achieve a 1-in-a-million catastrophic failure is ~6 million.\nmd5 has 128 bits, and in non-adversarial settings that’s plenty.\nThe penalty of using md5 is about 50%, and the requirement for using async:\n\n\n\n\n\n\n\n\n\nThat’s a completely acceptable tradeoff.\nSo, I think our general-purpose cache is:\n\nuse md5 or sha256, whichever is faster. The breakpoint where sha256 is clearly it is at string sizes of around 16k or larger.\nthis cache will be necessarily async."
+  },
+  {
+    "objectID": "posts/2025-01-30/index.html",
+    "href": "posts/2025-01-30/index.html",
+    "title": "cloneDeep avoidance",
+    "section": "",
+    "text": "Logging an idea for future use: we need to avoid cloneDeeping large structures. It has caused bugs in the past and is the source of performance issues.\nOne way to address this is to create a proxy object that forbids mutation, remove the cloneDeep call, and run our test suite. Rinse, repeat."
+  },
+  {
+    "objectID": "posts/2025-01-31-b/index.html",
+    "href": "posts/2025-01-31-b/index.html",
+    "title": "More TS attempts",
+    "section": "",
+    "text": "For these measurements, I’m using a machine where quarto render on quarto-web takes about 240s to render on 359 files.\nSome functions I’ve inspected and considered optimizing today:\n\n\n\nname\ntime per call\nnumber of calls\nupper bound on perf win\n\n\n\n\nresolveBootstrapScss\n1.8ms\n#files\n0.26%\n\n\ncleanSourceMappingUrl\n2.3ms\n#files\n0.34%\n\n\nextensionContext.find\n2.7ms\n#files\n0.4%\n\n\n\nI think there’s not a lot to be done here for now, and I should go back to Pandoc+Lua."
   }
 ]
