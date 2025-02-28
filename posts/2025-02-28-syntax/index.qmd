@@ -1,5 +1,5 @@
 ---
-title: A stand-alone surface syntax defintion for Quarto
+title: A stand-alone surface syntax definition for Quarto
 date: 2025-02-28
 author: Carlos
 categories:
