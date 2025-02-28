@@ -1,0 +1,58 @@
+---
+title: strange behavior with `projectMetadataForInputFile`
+date: 2025-01-31
+author: Carlos
+categories:
+  - performance
+---
+
+I identified in a profile that `projectMetadataForInputFile` was taking a relatively long time.
+
+This function checks the contents of a metadata object (a nested JSON record) for values that
+might look like paths by trying to find files in the file system that exist when the
+string value is interpreted as a path relative to a given directory.
+
+This seems like a good candidate for improvement because we call this function repeatedly throughout
+`quarto render`, and although the function has a local inner cache for `existsSync` calls, we
+make still repeated calls to `projectMetadataForInputFile` throughout.
+
+So I implemented a simple memoization strategy for the function. The results are baffling.
+The cache _hurts_ total runtime, and by a lot. (about 5/180s, just over 3%).
+
+I can't explain it. The function looks like this (the code on `main` is [slightly different](https://github.com/quarto-dev/quarto-cli/blob/60294d07f62aa25a88f065cf5e5215334240c442/src/command/render/render-contexts.ts#L755-L772), because we haven't merged the in-memory cache at this point).
+
+```typescript
+const memoryCacheKey =
+  `projectMetadataForInputFile/project-config/${inputDir}`;
+// this is the cache lookup
+const lookup = project.memoryCache[memoryCacheKey];
+if (lookup) {
+  return ld.cloneDeep(lookup as Metadata);
+}
+// this is the slow call
+const result = toInputRelativePaths(
+  projectType(project.config?.project?.[kProjectType]),
+  project.dir,
+  dirname(input),
+  ld.cloneDeep(project.config),
+) as Metadata;
+// we store the result here
+project.memoryCache[memoryCacheKey] = result;
+return result;
+```
+
+### Notes
+
+- I've measured the total time taken by the slow call and the storing of the value through `performance.now()`. 
+  Storing the value is supposedly (and unsurprisingly) taking much less time than the call to `toInputRelativePaths`
+
+- Adding the storing of the value without referencing or using it is enough to make the measured wall-clock time slower, in direct contradiction to the above.
+
+- Adding the lookup of the value without ever storing anything in the cache is _not_ enough to make the measured wall-clock time slower.
+
+- The keys are small (on the order of 200 bytes) and the stored objects are larger, but not big (their JSON representation is on the order of 20k)
+
+- The slowdown happens independently of using `Record<string, string>` or `Map<string, string>`: I've tried both.
+
+- The call to `ld.cloneDeep` in retrieving the result doesn't materially affect the total time.
+  I added it because I suspect that something downstream is causing the problem, but I can't figure out what it is.

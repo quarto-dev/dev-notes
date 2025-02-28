@@ -1,0 +1,51 @@
+---
+title: 'An early win for `jog` in scoped resolution'
+format: html
+date: 2025-01-24
+author: Carlos
+categories:
+  - performance
+  - lua
+filters:
+  - ../github-commit.lua
+  - ../drop-knitr-stderr.lua
+---
+
+{{< include ../_r-preamble.qmd >}}
+
+A win from using `jog` for one of our filters:
+
+- Before: []{.github-commit hash="53da9da410b2c95d9ae1dca75d71507cff606c2a"}
+- After: []{.github-commit hash="bf5bc5add450aa8a7c911d7162c28e1294f7631e"}
+
+```{r}
+commit_1 = "53da9da410b2c95d9ae1dca75d71507cff606c2a"
+commit_2 = "bf5bc5add450aa8a7c911d7162c28e1294f7631e"
+draw_commit_chart <- function(commit) {
+    short_commit = str_sub(commit, 1, 7)
+    ggplot(read_csv(str_c(commit, ".csv")) |>
+               group_by(filter) |>
+               summarise(total = sum(time) / 1e6),
+        aes(x = total, y=reorder(filter, total))) + 
+        geom_point() + 
+        labs(y = "filter name") +
+        labs(x = "total time (s)") +
+        ggtitle(str_interp("quarto commit ${short_commit}"))
+}
+```
+
+```{r}
+#| fig-height: 12
+#| fig-width: 6
+#| label: fig-before
+#| fig-cap: Runtimes by filter on `quarto-web` before moving to `jog`.
+draw_commit_chart(commit_1)
+```
+
+```{r}
+#| fig-height: 12
+#| fig-width: 6
+#| label: fig-after
+#| fig-cap: Runtimes by filter on `quarto-web` after moving to `jog`.
+draw_commit_chart(commit_2)
+```

@@ -1,0 +1,21 @@
+---
+title: More TS attempts
+date: 2025-01-31
+author: Carlos
+categories:
+  - performance
+  - TypeScript
+---
+
+For these measurements, I'm using a machine where `quarto render` on `quarto-web` takes about 240s to render on 359 files.
+
+Some functions I've inspected and considered optimizing today:
+
+| name | time per call | number of calls | upper bound on perf win |
+|-|-|-|-|
+| `resolveBootstrapScss` | 1.8ms | #files | 0.26% |
+| `cleanSourceMappingUrl` | 2.3ms | #files | 0.34% |
+| `extensionContext.find` | 2.7ms | #files | 0.4% |
+
+I think there's not a lot to be done here for now, and I should go back
+to Pandoc+Lua.

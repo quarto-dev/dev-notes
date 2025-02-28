@@ -1,0 +1,16 @@
+---
+title: Implementing a general-purpose project cache
+date: 2025-01-28
+author: Carlos
+categories:
+  - performance  
+  - TypeScript
+filters:
+  - ../drop-knitr-stderr.lua
+---
+
+{{< include ../_r-preamble.qmd >}}
+
+I've implemented a disk cache and started using it on some of our slow, stable computations (such as the analysis of SCSS files).
+
+This work is on the `feature/project-cache` branch.

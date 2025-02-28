@@ -1,0 +1,19 @@
+---
+title: "Lua win: remove `normalize-3`"
+date: 2025-01-31
+author: Carlos
+categories:
+  - performance  
+  - lua
+filters:
+  - ../github-commit.lua
+---
+
+Up to commit []{.github-commit hash="ca0587692627150b5693113a89b6ce745b95b0c6"}, Quarto had a three-stage filter
+for parsing custom AST nodes. The last stage existed to [fix a bug](https://github.com/quarto-dev/quarto-cli/issues/7045),
+but turned out to be quite onerous in terms of overall performance.
+
+Commit []{.github-commit hash="5aaaff00c2c5e332a5d9aa4573778c7a3f46f999"} rewrites the fix to happen inside the parsing itself.
+The result is a 1.5% overall reduction in rendering `quarto-web`.
+
+

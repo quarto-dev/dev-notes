@@ -1,0 +1,77 @@
+---
+title: Hashing Performance
+date: 2025-01-26
+author: Carlos
+categories:
+  - performance
+  - TypeScript
+filters:
+  - ../drop-knitr-stderr.lua
+---
+
+{{< include ../_r-preamble.qmd >}}
+
+In the course of 1.7's perf work, we are going to introduce a number of persistent caches
+for Quarto projects. This will require knowing which hashing functions perform well
+under what settings. I'm using [this file](./deno-hash-bench.ts) to measure the results.
+
+```{r}
+#| label: fig-runtimes
+#| fig-cap: Runtimes of different hashing algorithms in Deno
+library(tidyverse)
+times = read_csv("hashing-times.csv")
+df = times |> pivot_longer(!size_log2, names_to="algorithm", values_to="runtime")
+ggplot(df |> filter(size_log2 < 16), aes(x=size_log2, y=runtime, colour=algorithm)) + scale_y_log10() + geom_line()
+```
+
+Important features:
+
+| algorithm     | sync | quality    |
+|---------------|------|------------|
+| `djb2`        |  yes | non-crypto |
+| `blueimp-md5` |  yes | meh        |
+| `md5`         |   no | meh        |
+| `sha256`      |   no | good       |
+
+### djb2
+
+I've spent some time trying to write a faster version of djb2 and couldn't really make meaningful progress.
+I tried:
+
+- unrolling the loop directly (not enough of a win)
+- operating at 32 bits at a time by converting the string to a buffer first
+
+## Takeaways
+
+- `blueimp-md5` only makes sense if `sync` MD5 calls are necessary: it's slower than `md5` at every range.
+- `md5` only makes sense if the quality improvement over `djb2` is needed, but `sha256` not being required:
+  - the DJB2 algorithm gives ~32 bits of hashing space, birthday paradoxes start appearing at 2^16 items, while MD5 gives 128 bits.
+  - `md5` is, adversarially, trivially breakable
+
+- `sha256` is async and has a large startup cost, but is the fastest at strings starting at size ~2^14 = 16k, faster even than `djb2`.
+
+## A design for a general-purpose cache?
+
+If we need cryptographically-safe hashes, then we need to use SHA-256 everywhere. Unfortunately, that incurs ~15ms of overhead per call independently of the size of the string. That's a lot.
+
+If `djb2` is good enough in terms of quality, then we still need to worry about hash space size. `djb2` has 32 bits of address space. By the birthday paradox, if we want a 1 in a million chance of a hash collision, then the cache size needs to be at most [~100](https://en.wikipedia.org/wiki/Birthday_problem#Probability_table).
+
+Honestly, this number is small enough that I'm wary about using `djb2` at all in Quarto as a substitute for string equality.
+
+If we could create a 64-bit version of `djb2`, that would likely suffice for Quarto documents: the critical size for such caches to achieve a 1-in-a-million catastrophic failure is ~6 million.
+
+`md5` has 128 bits, and in non-adversarial settings that's plenty.
+
+The penalty of using `md5` is about 50%, and the requirement for using async:
+
+```{r}
+ggplot(times |> mutate(ratio=times$md5 / times$djb2), aes(x=size_log2, y=ratio)) + scale_y_log10() + geom_line()
+```
+
+That's a completely acceptable tradeoff.
+
+So, I think our general-purpose cache is:
+
+- use `md5` or `sha256`, whichever is faster. The breakpoint where `sha256` is clearly it is at string sizes of around 16k or larger.
+
+- this cache will be necessarily async.

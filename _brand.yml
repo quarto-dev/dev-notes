@@ -1,0 +1,23 @@
+color: 
+  background: '#1b1b1e'
+  foreground: '#eeeeee'
+  primary: '#4488dd'
+typography: 
+  fonts:
+    - source: google
+      family: 'Lato'
+      weight: [100, 300, 400, 700]
+    - source: google
+      family: 'Source Sans Pro'
+  base: 
+    family: 'Source Sans Pro'
+  headings:
+    family: 'Lato'
+  monospace: 
+    background-color: background
+    color: foreground
+defaults:
+  bootstrap:
+    defaults: # defaults also supports a string as its value
+      link-decoration: underline
+      navbar-bg: "#224488"

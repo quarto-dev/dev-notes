@@ -1,0 +1,85 @@
+---
+title: A smaller win than expected, and some ideas.
+date: 2025-02-18
+author: Carlos
+categories:
+  - performance
+  - lua
+filters:
+  - ../github-commit.lua
+---
+
+The change in commit []{.github-commit hash="0f38bf1ac5872bda170dbec65998aebc752f9eb2"} merged a filter
+but produced smaller wins than I expected.
+
+The portion of the code that takes a long time to run is likely to be the `Blocks` filter.
+
+## updates
+
+### 12:00PM
+
+Talking with Christophe, we've identified that this `Blocks` filter is no longer necessary, and we'll 
+remove it.
+
+### 12:48PM
+
+Removing the entire astpipeline_process_tables filter doesn't always yield a performance win?! 
+The only theory I have for this phenomenon for now is that this is the first filter
+that is ever executed against the AST and there might be some FFI overhead in touching the nodes.
+
+### 1:15PM
+
+the `stripNotes()` functionality in normalize.lua appears to take a fairly long time.
+Let's try to remove it. 
+
+#### 1:45PM
+
+This worked - we're now at 12.2% overall improvement since starting perf work.
+
+### 6:30PM
+
+After rescaling the plot of measured filter time to seconds, I noticed
+that it registered a grand total of 28.18634 seconds when the wall time
+of rendering `quarto-web` was 153 seconds.
+
+This is a bit of a mystery when we take into account that Pandoc is presumably taking over half the time of the website rendering; is filtering
+less than a third of the total Pandoc time??
+
+So I ran the following experiment: I commented out all of the filters
+in Quarto and ran `quarto render` on `quarto-web`. The output is of course
+broken, but the total run-time was 126.5 seconds. 153 - 126 = 27, which is
+perfectly consistent with the 28.18s amount.
+
+So maybe yes, the Pandoc runtime is not due to filters so much anymore.
+
+I then went one step further and forced Pandoc to emit an _empty_ document.
+The total runtime now is 117.3s. So the combined runtime of the HTML writer and (some of the) postprocessors is about 9.2s.
+
+From there, I then changed the _reader_ to not produce any _input_. The
+total runtime now was 83.6s. So the reader (in between readqmd and the markdown reading) is taking 33.7s, more than the filters themselves!
+
+LOOK INTO THIS: Weirdly, blog posts still take a half second or so to render per post. 
+
+After that, I removed all of the `import()` calls. That brought the
+runtime to 77.7s. So loading the Lua files takes 5.9s.
+
+After some more iterations of this "ablation" process, I got the following figures:
+
+- Pandoc:        76.9s     (49.8%)
+  - filters:       28.1s     (18.1%)
+  - reading:       33.7s     (21.7%)
+    - readqmd:       13.8s     ( 8.9%)
+    - parsing:       19.9s     (12.8%)
+  - writing:       9.2s      ( 5.9%)
+  - loading Lua:   5.9s      ( 3.8%)
+- non-Pandoc:    77.7s     (50.2%)
+
+- total:        154.6s
+
+The total time under this accounting is 154.6s, which is pretty close to the previous total measurement of 156.3s.
+
+
+## Next
+
+So the next perf project for me should be to go work on an external fast tool
+for converting Quarto's surface syntax to Pandoc's AST.

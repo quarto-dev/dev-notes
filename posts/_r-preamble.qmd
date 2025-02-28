@@ -1,0 +1,7 @@
+```{r}
+#| warning: false
+library(tidyverse)
+library(thematic)
+thematic::thematic_on(bg = "#1b1b1e", fg = "#eeeeee", accent="#4488dd", font = "Source Sans Pro")
+```
+

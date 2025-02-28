@@ -1,0 +1,20 @@
+---
+title: "About"
+about:
+  template: trestles
+---
+
+These are internal notes we, the Quarto devs, are writing.
+
+::: callout-important
+
+We're using these notes as external shared memory. We truly mean the following: we make no promises that anything here will make sense to anyone else!
+
+:::
+
+Think of the silly "if you're not embarrassed by your first iteration, you took too long to ship" saying. We're truly putting that to the test here.
+
+We're making these notes public because it's easier for us to collect them between ourselves in this way than not to.
+
+You're welcome to read them!
+But if you're not a Quarto developer (eg, you have a commit to `quarto-dev/quarto` or `quarto-dev/quarto-cli` under your name), we unfortunately won't have time to take your read your feedback.

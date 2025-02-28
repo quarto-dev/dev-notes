@@ -1,0 +1,16 @@
+---
+title: '`cloneDeep` avoidance'
+date: 2025-01-30
+author: Carlos
+categories:
+  - performance  
+  - TypeScript
+filters:
+  - ../drop-knitr-stderr.lua
+---
+
+Logging an idea for future use: we need to avoid `cloneDeep`ing large structures.
+It has caused bugs in the past and is the source of performance issues.
+
+One way to address this is to create a proxy object that forbids mutation, remove the cloneDeep call,
+and run our test suite. Rinse, repeat.

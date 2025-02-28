@@ -1,0 +1,35 @@
+---
+title: Summary so far
+echo: false
+filters:
+  - ../posts/drop-knitr-stderr.lua
+---
+
+{{< include ../posts/_r-preamble.qmd >}}
+
+```{r}
+library(tidyverse)
+library(gt)
+```
+
+```{r}
+#| label: fig-summary
+#| fig-cap: The total runtime of `quarto render` on `quarto-dev/quarto-web`.
+df <- read_csv("summary.csv")
+#ggplot(df, aes(x=time, y=date)) + 
+#    # this appears to not work? :shrug:
+#    scale_y_continuous(trans = c("reverse", "date")) +
+#    geom_point()
+summary_data <- read_csv("summary.csv")
+summary_data |> 
+  # arrange(desc(date)) |>
+  ggplot(aes(x = time, y = date)) + 
+  scale_y_continuous(
+    trans = c("date", "reverse")
+  ) +
+  geom_point()
+```
+
+```{r}
+gt(df)
+```

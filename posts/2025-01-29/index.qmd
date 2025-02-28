@@ -1,0 +1,40 @@
+---
+title: Caching and TS profiling observations
+date: 2025-01-29
+author: Carlos
+categories:
+  - performance
+  - TypeScript
+filters:
+  - ../drop-knitr-stderr.lua
+resources: 
+  - CPU-20250129T083238.cpuprofile
+---
+
+## Caching
+
+With a project cache available, we can start to use it. 
+But where?
+I've already implemented caching for the SCSS variable analysis code, which takes
+about 0.5s seconds per call.
+
+It's a win, but the analysis only happens once per SCSS file.
+That improves repeated renderings of single files in projects, but is not a large win for large projects (`quarto-web` takes ~3 minutes).
+
+Currently, the project cache is ephemeral in the case of single-file projects.
+This is a conservative choice.
+The alternative would be to have a shared in the user's directory for single-file projects.
+
+I don't like this alternative for two related reasons:
+
+- It will require us to reason about correctness of keeping cached values of arbitrary files together.
+- It will stop us from using the project cache in a way that would improve projects (the source of most of our
+  critical performance issues) but would break single-file caches.
+
+## TS performance profiles
+
+This is the profile data we're using: [CPU-20250129T083238.cpuprofile](./CPU-20250129T083238.cpuprofile).
+
+To look at this data yourself, you'll need Google Chrome.
+Open the DevTools, click on the Performance tab, and then "Load Profile" (the fourth button from the left, an icon with an arrow pointing up from a tray).
+

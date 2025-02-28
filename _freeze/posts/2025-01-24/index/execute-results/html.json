@@ -1,0 +1,17 @@
+{
+  "hash": "30f9e2d83b2573bfb44865cc97ce101e",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: 'An early win for `jog` in scoped resolution'\nformat: html\ndate: 2025-01-24\nauthor: Carlos\ncategories:\n  - performance\nfilters:\n  - ../github-commit.lua\n  - ../drop-knitr-stderr.lua\n---\n\n::: {.cell}\n\n:::\n\n\n\nA win from using `jog` for one of our filters:\n\n- Before: []{.github-commit hash=\"53da9da410b2c95d9ae1dca75d71507cff606c2a\"}\n- After: []{.github-commit hash=\"bf5bc5add450aa8a7c911d7162c28e1294f7631e\"}\n\n::: {.cell}\n\n:::\n\n::: {.cell}\n::: {.cell-output .cell-output-stderr}\n\n```\nRows: 5030 Columns: 3\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (2): filter, name\ndbl (1): time\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n```\n\n\n:::\n\n::: {.cell-output-display}\n![Runtimes by filter on `quarto-web` before moving to `jog`.](index_files/figure-html/fig-before-1.png){#fig-before width=576}\n:::\n:::\n\n::: {.cell}\n::: {.cell-output .cell-output-stderr}\n\n```\nRows: 4979 Columns: 3\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (2): filter, name\ndbl (1): time\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n```\n\n\n:::\n\n::: {.cell-output-display}\n![Runtimes by filter on `quarto-web` after moving to `jog`.](index_files/figure-html/fig-after-1.png){#fig-after width=576}\n:::\n:::\n",
+    "supporting": [
+      "index_files"
+    ],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

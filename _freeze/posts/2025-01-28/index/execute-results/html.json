@@ -1,0 +1,15 @@
+{
+  "hash": "c0526d4b2d1c2d7aebe5ac105b33cd28",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: Implementing a general-purpose project cache\ndate: 2025-01-28\nauthor: Carlos\ncategories:\n  - performance  \n  - TypeScript\nfilters:\n  - ../drop-knitr-stderr.lua\n---\n\n::: {.cell}\n\n:::\n\n\n\nI've implemented a disk cache and started using it on some of our slow, stable computations (such as the analysis of SCSS files).\n\nThis work is on the `feature/project-cache` branch.",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
