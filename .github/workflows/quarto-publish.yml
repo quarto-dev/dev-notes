@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Install ubuntu libraries
+        run: sudo apt install -y libcurl4-openssl-dev
         
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
