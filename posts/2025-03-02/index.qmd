@@ -1,0 +1,38 @@
+---
+title: Syntax errors are Good, Actually
+author: Carlos
+date: 2025-03-03
+categories:
+  - syntax
+---
+
+I consider the following [sentence in the CommonMark spec](https://spec.commonmark.org/0.31.2/#preliminaries) to be a fatal flaw in its design:
+
+> Any sequence of characters is a valid CommonMark document.
+
+Syntax errors are good!
+People make typos; a good language makes it so that common typos are obviously detectable.
+Imagine ifevery sequence of characters were a valid English word.
+The reason it isn't the case, of course, is that languages that are bad like this are selected away.
+
+Why is CommonMark making this obvious mistake?
+I don't understand it.
+A lack of errors isn't a kindness to novice users.
+It's the other way around!
+
+Incidentally, this is another thing that [Typst](https://typst.app/docs/) gets right.
+You get _excellent_ syntax errors and linting when using Typst.
+That's how it should be!
+
+And that's what we're going to try in Quarto Markdown.
+A syntax that's as close to Markdown as we can make it, but for which you get proper syntax errors.
+
+Consider [Example 307](https://github.github.com/gfm/#example-307) from the GFM spec:
+
+> Input: `` `hi`lo` ``
+>
+> Output: `` <p><code>hi</code>lo`</p> ``
+
+This really should be a syntax error.
+Mismatched backquotes should be disallowed, and "naked" backquotes should be escaped (likely with a backslash).
+I'm not sure how many of these classes of examples we will be able to convert, but it should give you an idea

@@ -56,3 +56,21 @@ Similarly, inline executable code cells have the language attribute declared ins
 code non-executable inline code elements have attributes declared outside the ticks.
 We could improve all of this.
 
+## Notes
+
+### 2:04PM
+
+```
+$ pandoc -f markdown to native
+## Hello {#id .class key=value}
+^D
+[ Header
+    2
+    ( "id" , [ "class" ] , [ ( "key" , "value" ) ] )
+    [ Str "Notes" ]
+]
+```
+
+Pandoc supports attributes at the end of ATX heading lines as the above example.
+This seems hard to do in the way that `tree-sitter-markdown` is structured, because the
+entire line starting with `##` is sent to the `inline` grammar. 
