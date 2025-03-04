@@ -56,11 +56,39 @@
     "text": "A design for a general-purpose cache?\nIf we need cryptographically-safe hashes, then we need to use SHA-256 everywhere. Unfortunately, that incurs ~15ms of overhead per call independently of the size of the string. That’s a lot.\nIf djb2 is good enough in terms of quality, then we still need to worry about hash space size. djb2 has 32 bits of address space. By the birthday paradox, if we want a 1 in a million chance of a hash collision, then the cache size needs to be at most ~100.\nHonestly, this number is small enough that I’m wary about using djb2 at all in Quarto as a substitute for string equality.\nIf we could create a 64-bit version of djb2, that would likely suffice for Quarto documents: the critical size for such caches to achieve a 1-in-a-million catastrophic failure is ~6 million.\nmd5 has 128 bits, and in non-adversarial settings that’s plenty.\nThe penalty of using md5 is about 50%, and the requirement for using async:\n\n\n\n\n\n\n\n\n\nThat’s a completely acceptable tradeoff.\nSo, I think our general-purpose cache is:\n\nuse md5 or sha256, whichever is faster. The breakpoint where sha256 is clearly it is at string sizes of around 16k or larger.\nthis cache will be necessarily async."
   },
   {
-    "objectID": "posts/2025-01-31/index.html",
-    "href": "posts/2025-01-31/index.html",
-    "title": "strange behavior with projectMetadataForInputFile",
+    "objectID": "posts/2025-01-28/index.html",
+    "href": "posts/2025-01-28/index.html",
+    "title": "Implementing a general-purpose project cache",
     "section": "",
-    "text": "I identified in a profile that projectMetadataForInputFile was taking a relatively long time.\nThis function checks the contents of a metadata object (a nested JSON record) for values that might look like paths by trying to find files in the file system that exist when the string value is interpreted as a path relative to a given directory.\nThis seems like a good candidate for improvement because we call this function repeatedly throughout quarto render, and although the function has a local inner cache for existsSync calls, we make still repeated calls to projectMetadataForInputFile throughout.\nSo I implemented a simple memoization strategy for the function. The results are baffling. The cache hurts total runtime, and by a lot. (about 5/180s, just over 3%).\nI can’t explain it. The function looks like this (the code on main is slightly different, because we haven’t merged the in-memory cache at this point).\nconst memoryCacheKey =\n  `projectMetadataForInputFile/project-config/${inputDir}`;\n// this is the cache lookup\nconst lookup = project.memoryCache[memoryCacheKey];\nif (lookup) {\n  return ld.cloneDeep(lookup as Metadata);\n}\n// this is the slow call\nconst result = toInputRelativePaths(\n  projectType(project.config?.project?.[kProjectType]),\n  project.dir,\n  dirname(input),\n  ld.cloneDeep(project.config),\n) as Metadata;\n// we store the result here\nproject.memoryCache[memoryCacheKey] = result;\nreturn result;\n\nNotes\n\nI’ve measured the total time taken by the slow call and the storing of the value through performance.now(). Storing the value is supposedly (and unsurprisingly) taking much less time than the call to toInputRelativePaths\nAdding the storing of the value without referencing or using it is enough to make the measured wall-clock time slower, in direct contradiction to the above.\nAdding the lookup of the value without ever storing anything in the cache is not enough to make the measured wall-clock time slower.\nThe keys are small (on the order of 200 bytes) and the stored objects are larger, but not big (their JSON representation is on the order of 20k)\nThe slowdown happens independently of using Record&lt;string, string&gt; or Map&lt;string, string&gt;: I’ve tried both.\nThe call to ld.cloneDeep in retrieving the result doesn’t materially affect the total time. I added it because I suspect that something downstream is causing the problem, but I can’t figure out what it is."
+    "text": "I’ve implemented a disk cache and started using it on some of our slow, stable computations (such as the analysis of SCSS files).\nThis work is on the feature/project-cache branch."
+  },
+  {
+    "objectID": "posts/2025-01-24/index.html",
+    "href": "posts/2025-01-24/index.html",
+    "title": "An early win for jog in scoped resolution",
+    "section": "",
+    "text": "A win from using jog for one of our filters:\n\nBefore: 53da9da\nAfter: bf5bc5a\n\n\n\n\n\n\n\n\n\nFigure 1: Runtimes by filter on quarto-web before moving to jog.\n\n\n\n\n\n\n\n\n\n\n\n\n\nFigure 2: Runtimes by filter on quarto-web after moving to jog."
+  },
+  {
+    "objectID": "perf/summary.html",
+    "href": "perf/summary.html",
+    "title": "Summary so far",
+    "section": "",
+    "text": "Error : The fig.showtext code chunk option must be TRUE\n\n\n\n\n\n\n\n\nFigure 1: The total runtime of quarto render on quarto-dev/quarto-web.\n\n\n\n\n\n\n\n\n\n\n\n\n\ndate\ntime\n\n\n\n\n2024-11-26\n175.8\n\n\n2025-01-24\n167.8\n\n\n2025-01-29\n162.3\n\n\n2025-01-30\n161.0\n\n\n2025-01-31\n158.6\n\n\n2025-02-18\n156.3"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Quarto development notes",
+    "section": "",
+    "text": "Span vs Link syntax in LR(1) parsers?\n\n\n\n\n\n\nsyntax\n\n\n\n\n\n\n\n\n\nMar 4, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nSyntax errors are Good, Actually\n\n\n\n\n\n\nsyntax\n\n\n\n\n\n\n\n\n\nMar 3, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nA stand-alone surface syntax definition for Quarto\n\n\n\n\n\n\nsyntax\n\n\n\n\n\n\n\n\n\nFeb 28, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nA smaller win than expected, and some ideas.\n\n\n\n\n\n\nperformance\n\n\nlua\n\n\n\n\n\n\n\n\n\nFeb 18, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nstrange behavior with projectMetadataForInputFile\n\n\n\n\n\n\nperformance\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nMore TS attempts\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nLua win: remove normalize-3\n\n\n\n\n\n\nperformance\n\n\nlua\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\ncloneDeep avoidance\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 30, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nCaching and TS profiling observations\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 29, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nImplementing a general-purpose project cache\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 28, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nHashing Performance\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 26, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nAn early win for jog in scoped resolution\n\n\n\n\n\n\nperformance\n\n\nlua\n\n\n\n\n\n\n\n\n\nJan 24, 2025\n\n\nCarlos\n\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "These are internal notes we, the Quarto devs, are writing.\n\n\n\n\n\n\nImportant\n\n\n\nWe’re using these notes as external shared memory. We truly mean the following: we make no promises that anything here will make sense to anyone else!\n\n\nThink of the silly “if you’re not embarrassed by your first iteration, you took too long to ship” saying. We’re truly putting that to the test here.\nWe’re making these notes public because it’s easier for us to collect them between ourselves in this way than not to.\nYou’re welcome to read them! But if you’re not a Quarto developer (eg, you have a commit to quarto-dev/quarto or quarto-dev/quarto-cli under your name), we unfortunately won’t have time to take your read your feedback."
   },
   {
     "objectID": "posts/2025-02-18/index.html",
@@ -84,39 +112,18 @@
     "text": "Next\nSo the next perf project for me should be to go work on an external fast tool for converting Quarto’s surface syntax to Pandoc’s AST."
   },
   {
-    "objectID": "about.html",
-    "href": "about.html",
-    "title": "About",
+    "objectID": "posts/2025-01-31/index.html",
+    "href": "posts/2025-01-31/index.html",
+    "title": "strange behavior with projectMetadataForInputFile",
     "section": "",
-    "text": "These are internal notes we, the Quarto devs, are writing.\n\n\n\n\n\n\nImportant\n\n\n\nWe’re using these notes as external shared memory. We truly mean the following: we make no promises that anything here will make sense to anyone else!\n\n\nThink of the silly “if you’re not embarrassed by your first iteration, you took too long to ship” saying. We’re truly putting that to the test here.\nWe’re making these notes public because it’s easier for us to collect them between ourselves in this way than not to.\nYou’re welcome to read them! But if you’re not a Quarto developer (eg, you have a commit to quarto-dev/quarto or quarto-dev/quarto-cli under your name), we unfortunately won’t have time to take your read your feedback."
+    "text": "I identified in a profile that projectMetadataForInputFile was taking a relatively long time.\nThis function checks the contents of a metadata object (a nested JSON record) for values that might look like paths by trying to find files in the file system that exist when the string value is interpreted as a path relative to a given directory.\nThis seems like a good candidate for improvement because we call this function repeatedly throughout quarto render, and although the function has a local inner cache for existsSync calls, we make still repeated calls to projectMetadataForInputFile throughout.\nSo I implemented a simple memoization strategy for the function. The results are baffling. The cache hurts total runtime, and by a lot. (about 5/180s, just over 3%).\nI can’t explain it. The function looks like this (the code on main is slightly different, because we haven’t merged the in-memory cache at this point).\nconst memoryCacheKey =\n  `projectMetadataForInputFile/project-config/${inputDir}`;\n// this is the cache lookup\nconst lookup = project.memoryCache[memoryCacheKey];\nif (lookup) {\n  return ld.cloneDeep(lookup as Metadata);\n}\n// this is the slow call\nconst result = toInputRelativePaths(\n  projectType(project.config?.project?.[kProjectType]),\n  project.dir,\n  dirname(input),\n  ld.cloneDeep(project.config),\n) as Metadata;\n// we store the result here\nproject.memoryCache[memoryCacheKey] = result;\nreturn result;\n\nNotes\n\nI’ve measured the total time taken by the slow call and the storing of the value through performance.now(). Storing the value is supposedly (and unsurprisingly) taking much less time than the call to toInputRelativePaths\nAdding the storing of the value without referencing or using it is enough to make the measured wall-clock time slower, in direct contradiction to the above.\nAdding the lookup of the value without ever storing anything in the cache is not enough to make the measured wall-clock time slower.\nThe keys are small (on the order of 200 bytes) and the stored objects are larger, but not big (their JSON representation is on the order of 20k)\nThe slowdown happens independently of using Record&lt;string, string&gt; or Map&lt;string, string&gt;: I’ve tried both.\nThe call to ld.cloneDeep in retrieving the result doesn’t materially affect the total time. I added it because I suspect that something downstream is causing the problem, but I can’t figure out what it is."
   },
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Quarto development notes",
+    "objectID": "posts/2025-03-04/index.html",
+    "href": "posts/2025-03-04/index.html",
+    "title": "Span vs Link syntax in LR(1) parsers?",
     "section": "",
-    "text": "Syntax errors are Good, Actually\n\n\n\n\n\n\nsyntax\n\n\n\n\n\n\n\n\n\nMar 3, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nA stand-alone surface syntax definition for Quarto\n\n\n\n\n\n\nsyntax\n\n\n\n\n\n\n\n\n\nFeb 28, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nA smaller win than expected, and some ideas.\n\n\n\n\n\n\nperformance\n\n\nlua\n\n\n\n\n\n\n\n\n\nFeb 18, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nstrange behavior with projectMetadataForInputFile\n\n\n\n\n\n\nperformance\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nMore TS attempts\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nLua win: remove normalize-3\n\n\n\n\n\n\nperformance\n\n\nlua\n\n\n\n\n\n\n\n\n\nJan 31, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\ncloneDeep avoidance\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 30, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nCaching and TS profiling observations\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 29, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nImplementing a general-purpose project cache\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 28, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nHashing Performance\n\n\n\n\n\n\nperformance\n\n\nTypeScript\n\n\n\n\n\n\n\n\n\nJan 26, 2025\n\n\nCarlos\n\n\n\n\n\n\n\n\n\n\n\n\nAn early win for jog in scoped resolution\n\n\n\n\n\n\nperformance\n\n\nlua\n\n\n\n\n\n\n\n\n\nJan 24, 2025\n\n\nCarlos\n\n\n\n\n\n\nNo matching items"
-  },
-  {
-    "objectID": "perf/summary.html",
-    "href": "perf/summary.html",
-    "title": "Summary so far",
-    "section": "",
-    "text": "Error : The fig.showtext code chunk option must be TRUE\n\n\n\n\n\n\n\n\nFigure 1: The total runtime of quarto render on quarto-dev/quarto-web.\n\n\n\n\n\n\n\n\n\n\n\n\n\ndate\ntime\n\n\n\n\n2024-11-26\n175.8\n\n\n2025-01-24\n167.8\n\n\n2025-01-29\n162.3\n\n\n2025-01-30\n161.0\n\n\n2025-01-31\n158.6\n\n\n2025-02-18\n156.3"
-  },
-  {
-    "objectID": "posts/2025-01-24/index.html",
-    "href": "posts/2025-01-24/index.html",
-    "title": "An early win for jog in scoped resolution",
-    "section": "",
-    "text": "A win from using jog for one of our filters:\n\nBefore: 53da9da\nAfter: bf5bc5a\n\n\n\n\n\n\n\n\n\nFigure 1: Runtimes by filter on quarto-web before moving to jog.\n\n\n\n\n\n\n\n\n\n\n\n\n\nFigure 2: Runtimes by filter on quarto-web after moving to jog."
-  },
-  {
-    "objectID": "posts/2025-01-28/index.html",
-    "href": "posts/2025-01-28/index.html",
-    "title": "Implementing a general-purpose project cache",
-    "section": "",
-    "text": "I’ve implemented a disk cache and started using it on some of our slow, stable computations (such as the analysis of SCSS files).\nThis work is on the feature/project-cache branch."
+    "text": "We need to add support for the following two syntaxes, where {ATTR} is one of {language}, {=raw-format}, {#id .class key=value}, {ATTR} is optional:\n\nFenced spans: [span text]{ATTR}\nLinks: [link text](./destination title){ATTR}\n\nUnless I’m missing something fairly fundamental, this cannot be readily parsed using LR(1) parsers, because the one-token lookahead at [ can’t tell if this is going to be a link or a span…\n(In contrast, images ![]() vs links are easy, because ! sends the parser into the “image” part of the state table.)\nThe hack we’re going to use in the parser is to change the inline link syntax to make the link destination optional. Then, at the time of interpreting the parse tree, links without destinations are considered spans.\nThat appears to work."
   },
   {
     "objectID": "posts/2025-02-28-syntax/index.html",
