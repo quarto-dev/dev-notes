@@ -1,0 +1,22 @@
+---
+title: Span vs Link syntax in LR(1) parsers?
+author: Carlos
+date: 2025-03-04
+categories:
+  - syntax
+---
+
+We need to add support for the following two syntaxes, where `{ATTR}` is one of
+`{language}`, `{=raw-format}`, `{#id .class key=value}`, `{ATTR}` is optional:
+
+- Fenced spans: `[span text]{ATTR}`
+- Links: `[link text](./destination title){ATTR}`
+
+Unless I'm missing something fairly fundamental, this cannot be readily parsed using LR(1) parsers, because the one-token lookahead at `[` can't tell if this is going to be a link or a span...
+
+(In contrast, images `![]()` vs links are easy, because `!` sends the parser into the "image" part of the state table.)
+
+The hack we're going to use in the parser is to change the inline link syntax to make the link destination optional.
+Then, at the time of interpreting the parse tree, links without destinations are considered spans.
+
+That appears to work.
