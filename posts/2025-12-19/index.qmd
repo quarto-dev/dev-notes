@@ -1,0 +1,72 @@
+---
+title: More on `quarto-markdown`, and our syntax for editorial marks
+author: Carlos
+date: 2025-12-19
+categories:
+  - syntax
+---
+
+This post started from [a copy of a comment I made on the Pandoc discussion forum](https://github.com/jgm/pandoc/issues/2873#issuecomment-3675508676). You'll find a bit of historical context on our (_still in development, and not deployed_) new parser and syntax, and a bit of our thought process behind the [syntax we choose for editorial marks](https://github.com/quarto-dev/quarto-markdown/blob/main/docs/syntax/editorial-marks.qmd).
+
+## A historical perspective of Pandoc markdown vs Quarto Markdown
+
+There hasn't been any new major syntax-level divergence between Quarto and Pandoc Markdown in 2024 and 2025.
+The two major syntax differences between Pandoc Markdown and quarto-markdown are:
+
+- code block syntax with `{lang}` attribute
+- shortcodes
+
+Shortcodes were introduced in Quarto very early on (before we were even numbering 0.* releases).
+As [\@tarleb](https://github.com/tarleb) [points out](https://github.com/jgm/pandoc/issues/2873#issuecomment-3674620407), this used to be a Lua filter.
+
+The code block syntax was supported in Pandoc through Pandoc 2. In 2023, [Pandoc 3.0 was released](https://github.com/jgm/pandoc/releases/tag/3.0) which changed the way code blocks were parsed in a way that's not compatible with the RMarkdown ecosystem. At that point, the only way we figured out how to retain backwards compatibility for our users was to introduce a pre-transformation of the markdown string so that it would survive the parsing barrier. (this is what eventually became [`readqmd.lua`](https://github.com/quarto-dev/quarto-cli/blob/d4cb6a74d8154cdc3e660547e5cdf27152d94f0e/src/resources/pandoc/datadir/readqmd.lua) in Quarto)
+
+Unfortunately, a Lua filter for processing shortcodes from Pandoc AST is not sufficiently robust in the presence of en-dash, `Emph` ambiguity in the inversion from AST to strings, (`*` or `_`?) and other minor `Str` conversion problems.
+Around May 2023, we moved to a more involved pre-transformation of the markdown string.
+This currently lives in [`lpegshortcode.lua`](https://github.com/quarto-dev/quarto-cli/blob/8704176b34bf424f282c8fb6264f958bba5c8dc2/src/resources/pandoc/datadir/lpegshortcode.lua).
+
+The next minor change we made to the processing involves a markdown quirk that we've repeatedly found our users making mistakes on (there's a discussion thread somewhere in the Pandoc repo), specifically about spaces around `=` in key-value attributes of fenced divs. We added a transformation that trims spaces, so that the following construction works in Quarto:
+
+```
+::: {#id key = value}
+
+:::
+```
+
+Although this is a divergence, we feel comfortable with this change because we don't believe it's plausible for users to type the above code and expect the result to be `[ Para [ Str ":::", Space, Str "{#id", Space, Str "key", Space, Str "=", Space, Str "value}"], Para [ Str ":::" ]]` (the result of `pandoc -t native`) instead of `[ Div ( "id" , [] , [ ( "key" , "value" ) ] ) [] ]` (the result of our transformation).
+
+The overall transformation works and has been in use in [`quarto-cli`](https://github.com/quarto-dev/quarto-cli) for a long time. But it's relatively brittle and hard to debug: the combination of LPEG parser in a custom reader, plus a post-processing filter leaves plenty of room for bad interactions to come up.
+
+### Quarto-markdown + quarto-cli
+
+Once we accepted that our users routinely make syntax errors in their documents, it became clear that we needed a Markdown dialect that could provide good messages (I personally consider Quarto's YAML validation system to be one of the good reasons people choose the additional complexity of Quarto over plain Pandoc.)
+So, early in 2025, we've decided we wanted an alternative to Pandoc's markdown reader to allow us to provide better diagnostic through the entirety of the document.
+[`quarto-markdown`](https://github.com/quarto-dev/quarto-markdown) has the public parts of the development (there's more going on that we are not quite ready to share yet).
+
+I will note that `quarto-markdown` is _not_ yet incorporated in Quarto. And, if it ends up being incorporated in Quarto 1.9, it will be:
+
+- explicitly opt-in, and 
+- only used for generating JSON to be consumed by the actual Pandoc binary in our rendering pipeline.
+
+So, to make it perfectly clear: _we have no plans for the next 5 years of the project (the furthest we've ever considered in terms of adjusting our development) for removing Pandoc from Quarto_.
+I really don't want there to be any confusion over this.
+
+## How `quarto-markdown` is implemented
+
+tl;dr: it's a (fairly complex) tree-sitter grammar followed by a postprocessing step (it's a filter infrastructure implemented very much like `pandoc`'s architecture, but internal to the Rust binary).
+
+This Rust infrastructure provides both a native binary with a minimal set of input and output formats (`qmd`, `json`, `native`), and a WASM crate for web environments.
+
+### Compatibility between quarto-markdown and other dialects
+
+I don't have a formal analysis ready to share yet, but we have spent a lot of time considering the equivalence between quarto-markdown and other dialects.
+I can share with you that we found a large subset of CommonMark documents that are parsed identically between quarto-markdown and CommonMark: we have a property-testing harness that generates random Pandoc ASTs, uses our QMD writer from `quarto-markdown`, and then looks for discrepancies between our parser and [`comrak`](https://github.com/kivikakk/comrak). I feel relatively confident that if/when we deploy quarto-markdown, it will be the case that most qmd documents on the web will feel like "pandoc markdown + extensions", rather than a new light markup syntax (to borrow jgm's terminology for djot).
+
+## Editorial Marks
+
+This brings me to the actual editorial marks, in constrast to critic markup.
+In `quarto-markdown`, they work the same as other syntax extensions, by "desugaring": our parser produces a Pandoc AST representation of editorial marks using spans and carefully-chosen class names.
+
+### Why a new syntax?
+
+I explicitly wanted a syntax that was evocative of spans, image content, and links. In markdown, we have `![_markdown_ **here**]()`, `[**and here**]{.span}`, and `[_here_](https://example.com)`. Square brackets uniformly denote structural elements whose content can contain (some) markdown. Curly brackets tend to denote "attribute-like annotations", and parenthesis are (off the top of my head) only used in link and image targets. So our syntax attempts to respect this notational uniformity.
