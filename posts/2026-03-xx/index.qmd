@@ -1,11 +1,13 @@
 ---
 title: Quarto Engine Extensions
 author: Gordon Woodhull
+toc: true
+toc-depth: 3
 ---
 
 Quarto 1.9 introduces [engine extensions](https://quarto.org/docs/extensions/engine.html), TypeScript plugins that run code blocks and capture their output.
 
-Currently there can be only one execution engine; see [Claiming a Language and Class](#claiming-a-language-and-class) to learn how the execution engine is chosen.
+Currently, there can be only one execution engine; see [Claiming a Language and Class](#claiming-a-language-and-class) to learn how the execution engine is chosen.
 
 Engine extensions are a very low-level mechanism, literally Markdown-in, Markdown-out. It's through the Quarto API that engine extensions get access to all the same tools that the built-in Jupyter and knitr execution engines use.[^1]
 
@@ -85,7 +87,7 @@ Since only one engine can handle a document, Quarto needs to determine which one
 1. **Explicit declaration** — if the YAML frontmatter specifies `engine: marimo`, that engine is used directly.
 2. **Language claiming** — otherwise, Quarto extracts the languages from code blocks and asks each engine whether it claims them.
 
-The `claimsLanguage` function returns `false` to pass, `true` to claim (with priority 1), or a number for a custom priority. Highest score wins.
+The `claimsLanguage` function returns `false` to pass, `true` to claim (with priority 1), or a number for a custom priority. The highest score wins.
 
 For an engine with its own language, this is straightforward:
 
@@ -104,7 +106,7 @@ claimsLanguage: (language: string, firstClass?: string): boolean | number => {
 },
 ```
 
-If no engine claims any language, Quarto falls back to Jupyter for unrecognized computational languages, or the markdown engine if there are no code blocks at all.
+If no engine claims any language, Quarto falls back to Jupyter for unrecognized computational languages, or to the markdown engine if there are no code blocks at all.
 
 Engines can also claim files by extension via `claimsFile(file, ext)` — this is how the Jupyter engine claims `.ipynb` files. Most engine extensions return `false` here and rely on `claimsLanguage` instead.
 
@@ -152,7 +154,7 @@ The most important fields of `ExecuteOptions`:
 
 Other fields include `resourceDir`, `cwd`, `params`, `quiet`, `previewServer`, `handledLanguages`, and `project`. See `@quarto/types` for the full interface.
 
-And the most important fields of `ExecuteResult`:
+The most important fields of `ExecuteResult`:
 
 - `markdown` — the processed markdown (this is the main output)
 - `supporting` — paths to supporting files like figures
@@ -230,11 +232,27 @@ These are part of the `ExecutionEngineInstance` interface but are usually no-ops
 
 
 
+## CLI integration
+
+Engine extensions can optionally implement two CLI commands.
+
+### `quarto check <engine-name>`
+
+If your engine implements `checkInstallation(conf)`, users can run `quarto check <engine-name>` to verify that the engine's runtime is installed and working. The `conf` object provides output helpers for formatting check results. The built-in Jupyter and knitr engines check that their runtimes are installed, report capabilities, and perform a test render of a simple document via `quarto.system.checkRender()`.
+
+### `quarto call engine <engine-name>`
+
+If your engine implements `populateCommand(command)`, it can register subcommands under `quarto call engine <engine-name>`. The `command` parameter is a [Cliffy](https://cliffy.io/) `Command` object that you populate with subcommands.
+
+Julia uses this to expose daemon management commands like `quarto call engine julia status` and `quarto call engine julia stop`. Engines that don't run a persistent process are less likely to need custom commands.
+
 ## Conclusion
 
-If you've made it this far, you now know the full lifecycle of a Quarto engine extension: discovery, claiming, and execution. That's enough to get building — start with `quarto create extension engine` and look at the [marimo](https://github.com/marimo-team/quarto-marimo) and [Julia](https://github.com/quarto-dev/quarto-cli/tree/main/src/resources/extension-subtrees/julia-engine) engines for real-world examples.
+If you've made it this far, you now know the full lifecycle of a Quarto engine extension: discovery, claiming, execution, and CLI integration. That's enough to get building — start with `quarto create extension engine` and look at the [marimo](https://github.com/marimo-team/quarto-marimo) and [Julia](https://github.com/quarto-dev/quarto-cli/tree/main/src/resources/extension-subtrees/julia-engine) engines for real-world examples.
 
-The rest of this post is reference material: the Quarto API types and CLI integration points. Useful when you need them, but not required reading. And since the API is still stabilizing, if you hit rough edges, please [file an issue](https://github.com/quarto-dev/quarto-cli/issues).
+The rest of this post is reference material for the Quarto API types, to consult as needed. 
+
+We're excited to see what engines people build. Share what you're working xon or ask questions in a [discussion](https://github.com/quarto-dev/quarto-cli/discussions?discussions_q=label%3Aengine-extensions).
 
 ## The Quarto API
 
@@ -343,7 +361,7 @@ The remaining methods are optional.
 
 ### `EngineProjectContext`
 
-This is a restricted view of Quarto's project context, passed to `launch()`. We won't cover every field here: `dir`, `isSingleFile`, `config`, `getOutputDirectory()`, and `fileInformationCache` are mostly self-explanatory. But one method deserves attention.
+This is a restricted view of Quarto's project context, passed to `launch()`. We won't cover every field here — `dir`, `isSingleFile`, `config`, `getOutputDirectory()`, and `fileInformationCache` are mostly self-explanatory. But one method requires explanation.
 
 `resolveFullMarkdownForFile(engine, file, markdown?, force?)`
 : `{{< include >}}` shortcodes can appear inside code blocks to import code. The engine needs these expanded before execution, otherwise it will try to execute the raw shortcode text. A Lua filter later in the Pandoc pipeline also handles includes (including ones emitted by code execution), but that runs after the engine. This method expands all `{{< include >}}` shortcodes in the source document before the engine sees it.
@@ -384,21 +402,6 @@ The `QuartoAPI` object received in `init()` provides nine namespaces. See `@quar
 
 `crypto` provides `md5Hash()`.
 
-
-
-## CLI integration
-
-Engine extensions can optionally implement two CLI commands.
-
-### `quarto check <engine-name>`
-
-If your engine implements `checkInstallation(conf)`, users can run `quarto check <engine-name>` to verify that the engine's runtime is installed and working. The `conf` object provides output helpers for formatting check results. The built-in Jupyter and knitr engines check that their runtimes are installed, report capabilities, and perform a test render of a simple document via `quarto.system.checkRender()`.
-
-### `quarto call engine <engine-name>`
-
-If your engine implements `populateCommand(command)`, it can register subcommands under `quarto call engine <engine-name>`. The `command` parameter is a [Cliffy](https://cliffy.io/) `Command` object that you populate with subcommands.
-
-Julia uses this to expose daemon management commands like `quarto call engine julia status` and `quarto call engine julia stop`. Engines that don't run a persistent process are less likely to need custom commands.
 
 
 [^1]: A long-term goal is to be able to move the execution engines out of the quarto-cli core.
