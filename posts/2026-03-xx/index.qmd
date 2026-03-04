@@ -3,9 +3,10 @@ title: Quarto Engine Extensions
 author: Gordon Woodhull
 toc: true
 toc-depth: 3
+quarto-root: https://prerelease.quarto.org
 ---
 
-Quarto 1.9 introduces [engine extensions](https://quarto.org/docs/extensions/engine.html), TypeScript plugins that run code blocks and capture their output.
+Quarto 1.9 introduces [engine extensions]({{< meta quarto-root >}}/docs/extensions/engine.html), TypeScript plugins that run code blocks and capture their output.
 
 Currently, there can be only one execution engine; see [Claiming a Language and Class](#claiming-a-language-and-class) to learn how the execution engine is chosen.
 
@@ -39,7 +40,7 @@ This creates a project with two pieces: an `_extension.yml` that declares the en
 
 ### `_extension.yml`
 
-The extension metadata lives in [`_extensions/{name}/_extension.yml`](https://quarto.org/docs/extensions/). For an engine extension, the important part is `contributes.engines`:
+The extension metadata lives in [`_extensions/{name}/_extension.yml`]({{< meta quarto-root >}}/docs/extensions/). For an engine extension, the important part is `contributes.engines`:
 
 ```yaml
 title: My Engine
@@ -137,7 +138,7 @@ interface ExecutionTarget {
 
 Most engines do the same thing here — read the file as a `MappedString` and extract its YAML. `MappedString` is a string that carries source location mapping so that error messages can point back to the right line in the original file. Use `quarto.mappedString.fromFile()` to create one.
 
-[`{{< include >}}` shortcodes](https://quarto.org/docs/authoring/includes.html) can appear inside code blocks to import code. Call `context.resolveFullMarkdownForFile()` here to expand them before `execute()` sees the document — see [`EngineProjectContext`](#engineprojectcontext). Both knitr and Jupyter do this.[^2]
+[`{{< include >}}` shortcodes]({{< meta quarto-root >}}/docs/authoring/includes.html) can appear inside code blocks to import code. Call `context.resolveFullMarkdownForFile()` here to expand them before `execute()` sees the document — see [`EngineProjectContext`](#engineprojectcontext). Both knitr and Jupyter do this.[^2]
 
 [^2]: Currently, neither marimo nor the Julia engine calls `resolveFullMarkdownForFile`.
 
@@ -158,7 +159,7 @@ The most important fields of `ExecuteResult`:
 
 - `markdown` — the processed markdown (this is the main output)
 - `supporting` — paths to supporting files like figures
-- `filters` — [pandoc filters](https://quarto.org/docs/extensions/filters.html) to apply
+- `filters` — [pandoc filters]({{< meta quarto-root >}}/docs/extensions/filters.html) to apply
 - `includes` — content to inject into the document header, footer, etc.
 
 Other fields include `metadata`, `pandoc`, `engine`, `engineDependencies`, `preserve`, `postProcess`, and `resourceFiles`.
@@ -248,11 +249,13 @@ Julia uses this to expose daemon management commands like `quarto call engine ju
 
 ## Conclusion
 
-If you've made it this far, you now know the full lifecycle of a Quarto engine extension: discovery, claiming, execution, and CLI integration. That's enough to get building — start with `quarto create extension engine` and look at the [marimo](https://github.com/marimo-team/quarto-marimo) and [Julia](https://github.com/quarto-dev/quarto-cli/tree/main/src/resources/extension-subtrees/julia-engine) engines for real-world examples.
+If you've made it this far, you now know the full lifecycle of a Quarto engine extension: discovery, claiming, execution, and CLI integration.
 
-The rest of this post is reference material for the Quarto API types, to consult as needed. 
+That's enough to get building — start with `quarto create extension engine` and look at the [marimo](https://github.com/marimo-team/quarto-marimo) and [Julia](https://github.com/gordonwoodhull/quarto-julia-engine) engines for real-world examples.
 
-We're excited to see what engines people build. Share what you're working xon or ask questions in a [discussion](https://github.com/quarto-dev/quarto-cli/discussions?discussions_q=label%3Aengine-extensions).
+The rest of this post is a summary of the Quarto API interfaces and namespaces, to consult as needed. 
+
+We're excited to see what engines people build. Share what you're working on or ask questions in a [discussion](https://github.com/quarto-dev/quarto-cli/discussions?discussions_q=label%3Aengine-extensions).
 
 ## The Quarto API
 
@@ -288,7 +291,7 @@ This is the top-level interface your engine exports as its default export. It ha
 : File extensions this engine supports beyond `.qmd` — for example, Jupyter returns `[".ipynb"]`. Most engine extensions return `[]`.
 
 `canFreeze`
-: Whether your engine supports [freezing](https://quarto.org/docs/projects/code-execution.html#freeze) (caching execution results so they aren't re-run).
+: Whether your engine supports [freezing]({{< meta quarto-root >}}/docs/projects/code-execution.html#freeze) (caching execution results so they aren't re-run).
 
 `generatesFigures`
 : Whether your engine produces figure output.
