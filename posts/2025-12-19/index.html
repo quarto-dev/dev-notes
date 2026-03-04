@@ -7,9 +7,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Carlos">
-<meta name="dcterms.date" content="2025-01-31">
+<meta name="dcterms.date" content="2025-12-19">
 
-<title>Lua win: remove normalize-3 – Dev notes for Quarto</title>
+<title>More on quarto-markdown, and our syntax for editorial marks – Dev notes for Quarto</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -121,10 +121,9 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Lua win: remove <code>normalize-3</code></h1>
+<h1 class="title">More on <code>quarto-markdown</code>, and our syntax for editorial marks</h1>
   <div class="quarto-categories">
-    <div class="quarto-category">performance</div>
-    <div class="quarto-category">lua</div>
+    <div class="quarto-category">syntax</div>
   </div>
   </div>
 
@@ -142,7 +141,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">January 31, 2025</p>
+      <p class="date">December 19, 2025</p>
     </div>
   </div>
   
@@ -154,10 +153,53 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<p>Up to commit <a href="https://github.com/quarto-dev/quarto-cli/commit/ca0587692627150b5693113a89b6ce745b95b0c6"><code>ca05876</code></a>, Quarto had a three-stage filter for parsing custom AST nodes. The last stage existed to <a href="https://github.com/quarto-dev/quarto-cli/issues/7045">fix a bug</a>, but turned out to be quite onerous in terms of overall performance.</p>
-<p>Commit <a href="https://github.com/quarto-dev/quarto-cli/commit/5aaaff00c2c5e332a5d9aa4573778c7a3f46f999"><code>5aaaff0</code></a> rewrites the fix to happen inside the parsing itself. The result is a 1.5% overall reduction in rendering <code>quarto-web</code>.</p>
+<p>This post started from <a href="https://github.com/jgm/pandoc/issues/2873#issuecomment-3675508676">a copy of a comment I made on the Pandoc discussion forum</a>. You’ll find a bit of historical context on our (<em>still in development, and not deployed</em>) new parser and syntax, and a bit of our thought process behind the <a href="https://github.com/quarto-dev/quarto-markdown/blob/main/docs/syntax/editorial-marks.qmd">syntax we choose for editorial marks</a>.</p>
+<section id="a-historical-perspective-of-pandoc-markdown-vs-quarto-markdown" class="level2">
+<h2 class="anchored" data-anchor-id="a-historical-perspective-of-pandoc-markdown-vs-quarto-markdown">A historical perspective of Pandoc markdown vs Quarto Markdown</h2>
+<p>There hasn’t been any new major syntax-level divergence between Quarto and Pandoc Markdown in 2024 and 2025. The two major syntax differences between Pandoc Markdown and quarto-markdown are:</p>
+<ul>
+<li>code block syntax with <code>{lang}</code> attribute</li>
+<li>shortcodes</li>
+</ul>
+<p>Shortcodes were introduced in Quarto very early on (before we were even numbering 0.* releases). As <a href="https://github.com/tarleb">@tarleb</a> <a href="https://github.com/jgm/pandoc/issues/2873#issuecomment-3674620407">points out</a>, this used to be a Lua filter.</p>
+<p>The code block syntax was supported in Pandoc through Pandoc 2. In 2023, <a href="https://github.com/jgm/pandoc/releases/tag/3.0">Pandoc 3.0 was released</a> which changed the way code blocks were parsed in a way that’s not compatible with the RMarkdown ecosystem. At that point, the only way we figured out how to retain backwards compatibility for our users was to introduce a pre-transformation of the markdown string so that it would survive the parsing barrier. (this is what eventually became <a href="https://github.com/quarto-dev/quarto-cli/blob/d4cb6a74d8154cdc3e660547e5cdf27152d94f0e/src/resources/pandoc/datadir/readqmd.lua"><code>readqmd.lua</code></a> in Quarto)</p>
+<p>Unfortunately, a Lua filter for processing shortcodes from Pandoc AST is not sufficiently robust in the presence of en-dash, <code>Emph</code> ambiguity in the inversion from AST to strings, (<code>*</code> or <code>_</code>?) and other minor <code>Str</code> conversion problems. Around May 2023, we moved to a more involved pre-transformation of the markdown string. This currently lives in <a href="https://github.com/quarto-dev/quarto-cli/blob/8704176b34bf424f282c8fb6264f958bba5c8dc2/src/resources/pandoc/datadir/lpegshortcode.lua"><code>lpegshortcode.lua</code></a>.</p>
+<p>The next minor change we made to the processing involves a markdown quirk that we’ve repeatedly found our users making mistakes on (there’s a discussion thread somewhere in the Pandoc repo), specifically about spaces around <code>=</code> in key-value attributes of fenced divs. We added a transformation that trims spaces, so that the following construction works in Quarto:</p>
+<pre><code>::: {#id key=value}
+
+:::</code></pre>
+<p>Although this is a divergence, we feel comfortable with this change because we don’t believe it’s plausible for users to type the above code and expect the result to be <code>[ Para [ Str ":::", Space, Str "{#id", Space, Str "key", Space, Str "=", Space, Str "value}"], Para [ Str ":::" ]]</code> (the result of <code>pandoc -t native</code>) instead of <code>[ Div ( "id" , [] , [ ( "key" , "value" ) ] ) [] ]</code> (the result of our transformation).</p>
+<p>The overall transformation works and has been in use in <a href="https://github.com/quarto-dev/quarto-cli"><code>quarto-cli</code></a> for a long time. But it’s relatively brittle and hard to debug: the combination of LPEG parser in a custom reader, plus a post-processing filter leaves plenty of room for bad interactions to come up.</p>
+<section id="quarto-markdown-quarto-cli" class="level3">
+<h3 class="anchored" data-anchor-id="quarto-markdown-quarto-cli">Quarto-markdown + quarto-cli</h3>
+<p>Once we accepted that our users routinely make syntax errors in their documents, it became clear that we needed a Markdown dialect that could provide good messages (I personally consider Quarto’s YAML validation system to be one of the good reasons people choose the additional complexity of Quarto over plain Pandoc.) So, early in 2025, we’ve decided we wanted an alternative to Pandoc’s markdown reader to allow us to provide better diagnostic through the entirety of the document. <a href="https://github.com/quarto-dev/quarto-markdown"><code>quarto-markdown</code></a> has the public parts of the development (there’s more going on that we are not quite ready to share yet).</p>
+<p>I will note that <code>quarto-markdown</code> is <em>not</em> yet incorporated in Quarto. And, if it ends up being incorporated in Quarto 1.9, it will be:</p>
+<ul>
+<li>explicitly opt-in, and</li>
+<li>only used for generating JSON to be consumed by the actual Pandoc binary in our rendering pipeline.</li>
+</ul>
+<p>So, to make it perfectly clear: <em>we have no plans for the next 5 years of the project (the furthest we’ve ever considered in terms of adjusting our development) for removing Pandoc from Quarto</em>. I really don’t want there to be any confusion over this.</p>
+</section>
+</section>
+<section id="how-quarto-markdown-is-implemented" class="level2">
+<h2 class="anchored" data-anchor-id="how-quarto-markdown-is-implemented">How <code>quarto-markdown</code> is implemented</h2>
+<p>tl;dr: it’s a (fairly complex) tree-sitter grammar followed by a postprocessing step (it’s a filter infrastructure implemented very much like <code>pandoc</code>’s architecture, but internal to the Rust binary).</p>
+<p>This Rust infrastructure provides both a native binary with a minimal set of input and output formats (<code>qmd</code>, <code>json</code>, <code>native</code>), and a WASM crate for web environments.</p>
+<section id="compatibility-between-quarto-markdown-and-other-dialects" class="level3">
+<h3 class="anchored" data-anchor-id="compatibility-between-quarto-markdown-and-other-dialects">Compatibility between quarto-markdown and other dialects</h3>
+<p>I don’t have a formal analysis ready to share yet, but we have spent a lot of time considering the equivalence between quarto-markdown and other dialects. I can share with you that we found a large subset of CommonMark documents that are parsed identically between quarto-markdown and CommonMark: we have a property-testing harness that generates random Pandoc ASTs, uses our QMD writer from <code>quarto-markdown</code>, and then looks for discrepancies between our parser and <a href="https://github.com/kivikakk/comrak"><code>comrak</code></a>. I feel relatively confident that if/when we deploy quarto-markdown, it will be the case that most qmd documents on the web will feel like “pandoc markdown + extensions”, rather than a new light markup syntax (to borrow jgm’s terminology for djot).</p>
+</section>
+</section>
+<section id="editorial-marks" class="level2">
+<h2 class="anchored" data-anchor-id="editorial-marks">Editorial Marks</h2>
+<p>This brings me to the actual editorial marks, in constrast to critic markup. In <code>quarto-markdown</code>, they work the same as other syntax extensions, by “desugaring”: our parser produces a Pandoc AST representation of editorial marks using spans and carefully-chosen class names.</p>
+<section id="why-a-new-syntax" class="level3">
+<h3 class="anchored" data-anchor-id="why-a-new-syntax">Why a new syntax?</h3>
+<p>I explicitly wanted a syntax that was evocative of spans, image content, and links. In markdown, we have <code>![_markdown_ **here**]()</code>, <code>[**and here**]{.span}</code>, and <code>[_here_](https://example.com)</code>. Square brackets uniformly denote structural elements whose content can contain (some) markdown. Curly brackets tend to denote “attribute-like annotations”, and parenthesis are (off the top of my head) only used in link and image targets. So our syntax attempts to respect this notational uniformity.</p>
 
 
+</section>
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

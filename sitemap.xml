@@ -1,63 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-31-c/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.282Z</lastmod>
-  </url>
-  <url>
-    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-29/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.281Z</lastmod>
-  </url>
-  <url>
-    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-30/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.281Z</lastmod>
+    <loc>https://quarto-dev.github.io/dev-notes/about.html</loc>
+    <lastmod>2026-03-04T18:29:05.414Z</lastmod>
   </url>
   <url>
     <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-26/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.218Z</lastmod>
-  </url>
-  <url>
-    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-28/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.218Z</lastmod>
-  </url>
-  <url>
-    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-24/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.218Z</lastmod>
-  </url>
-  <url>
-    <loc>https://quarto-dev.github.io/dev-notes/perf/summary.html</loc>
-    <lastmod>2025-03-04T14:19:46.215Z</lastmod>
-  </url>
-  <url>
-    <loc>https://quarto-dev.github.io/dev-notes/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.215Z</lastmod>
-  </url>
-  <url>
-    <loc>https://quarto-dev.github.io/dev-notes/about.html</loc>
-    <lastmod>2025-03-04T14:19:46.215Z</lastmod>
-  </url>
-  <url>
-    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-02-18/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.282Z</lastmod>
-  </url>
-  <url>
-    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-31/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.282Z</lastmod>
-  </url>
-  <url>
-    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-03-04/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.283Z</lastmod>
+    <lastmod>2026-03-04T18:29:05.418Z</lastmod>
   </url>
   <url>
     <loc>https://quarto-dev.github.io/dev-notes/posts/2025-02-28-syntax/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.282Z</lastmod>
+    <lastmod>2026-03-04T18:29:05.481Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-31-c/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.480Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-12-19/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.481Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-29/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.479Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-03-04/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.481Z</lastmod>
   </url>
   <url>
     <loc>https://quarto-dev.github.io/dev-notes/posts/2025-03-02/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.282Z</lastmod>
+    <lastmod>2026-03-04T18:29:05.481Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.414Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-02-18/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.481Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-30/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.479Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-24/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.417Z</lastmod>
   </url>
   <url>
     <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-31-b/index.html</loc>
-    <lastmod>2025-03-04T14:19:46.282Z</lastmod>
+    <lastmod>2026-03-04T18:29:05.479Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-31/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.480Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/posts/2025-01-28/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.418Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/posts/2026-03-xx/index.html</loc>
+    <lastmod>2026-03-04T18:29:05.481Z</lastmod>
+  </url>
+  <url>
+    <loc>https://quarto-dev.github.io/dev-notes/perf/summary.html</loc>
+    <lastmod>2026-03-04T18:29:05.415Z</lastmod>
   </url>
 </urlset>
