@@ -4,6 +4,7 @@ author: Gordon Woodhull
 toc: true
 toc-depth: 3
 quarto-root: https://prerelease.quarto.org
+quarto-types: https://github.com/quarto-dev/quarto-cli/tree/main/packages/quarto-types
 ---
 
 Quarto 1.9 introduces [engine extensions]({{< meta quarto-root >}}/docs/extensions/engine.html), TypeScript plugins that run code blocks and capture their output.
@@ -26,7 +27,7 @@ quarto call build-ts-extensions
 
 to build your extension.
 
-For reference, the source of `@quarto/types` is [on GitHub](https://github.com/quarto-dev/quarto-cli/tree/main/packages/quarto-types). Check the branches e.g. `v1.9` for the stable releases; main is unstable.
+For reference, the source of `@quarto/types` is [on GitHub]({{< meta quarto-types >}}). Check the branches e.g. `v1.9` for the stable releases; main is unstable.
 
 ## Getting started
 
@@ -153,7 +154,7 @@ The most important fields of `ExecuteOptions`:
 - `tempDir` — a temporary directory for intermediate files
 - `projectDir` — the project root, if applicable
 
-Other fields include `resourceDir`, `cwd`, `params`, `quiet`, `previewServer`, `handledLanguages`, and `project`. See `@quarto/types` for the full interface.
+Other fields include `resourceDir`, `cwd`, `params`, `quiet`, `previewServer`, `handledLanguages`, and `project`. See [`@quarto/types`]({{< meta quarto-types >}}/src/execution.ts) for the full interface.
 
 The most important fields of `ExecuteResult`:
 
@@ -259,9 +260,24 @@ We're excited to see what engines people build. Share what you're working on or 
 
 ## The Quarto API
 
-### `ExecutionEngineDiscovery`
+This blog post will cover only the core engine and project interfaces:
 
-This is the top-level interface your engine exports as its default export. It handles everything that doesn't require a project context.
+`ExecutionEngineDiscovery`
+: Properties and methods Quarto uses to choose an execution engine
+
+`ExecutionEngineInstance`
+: The running execution engine for a file render
+
+`EngineProjectContext`
+: The context passed to an engine instance
+
+Afterward, we'll briefly summarize the [API namespaces](#api-namespaces).
+
+### Interfaces
+
+#### `ExecutionEngineDiscovery`
+
+This is the top-level interface your engine exports as its default export. It handles everything that doesn't require a project context. See [`@quarto/types`]({{< meta quarto-types >}}/src/execution-engine.ts) for the full interface.
 
 `name`
 : Identifies the engine, used in YAML frontmatter (`engine: marimo`) and CLI commands.
@@ -312,9 +328,9 @@ The remaining methods are optional.
 
 
 
-### `ExecutionEngineInstance`
+#### `ExecutionEngineInstance`
 
-This is the object returned by `launch()` for each file render. It does the actual work of rendering a document.
+This is the object returned by `launch()` for each file render. It does the actual work of rendering a document. See [`@quarto/types`]({{< meta quarto-types >}}/src/execution-engine.ts) for the full interface.
 
 `name`
 : Engine name, repeated from `ExecutionEngineDiscovery`.
@@ -362,9 +378,11 @@ The remaining methods are optional.
 
 
 
-### `EngineProjectContext`
+#### `EngineProjectContext`
 
-This is a restricted view of Quarto's project context, passed to `launch()`. We won't cover every field here — `dir`, `isSingleFile`, `config`, `getOutputDirectory()`, and `fileInformationCache` are mostly self-explanatory. But one method requires explanation.
+This is a restricted view of Quarto's project context, passed to `launch()`. See [`@quarto/types`]({{< meta quarto-types >}}/src/project-context.ts) for the full interface. 
+
+We won't cover every field here — `dir`, `isSingleFile`, `config`, `getOutputDirectory()`, and `fileInformationCache` are mostly self-explanatory. But one method requires explanation.
 
 `resolveFullMarkdownForFile(engine, file, markdown?, force?)`
 : `{{< include >}}` shortcodes can appear inside code blocks to import code. The engine needs these expanded before execution, otherwise it will try to execute the raw shortcode text. A Lua filter later in the Pandoc pipeline also handles includes (including ones emitted by code execution), but that runs after the engine. This method expands all `{{< include >}}` shortcodes in the source document before the engine sees it.
@@ -377,7 +395,7 @@ This is a restricted view of Quarto's project context, passed to `launch()`. We 
 
 ### API namespaces
 
-The `QuartoAPI` object received in `init()` provides nine namespaces. See `@quarto/types` for the full interface.
+The `QuartoAPI` object received in `init()` provides nine namespaces. See [`@quarto/types`]({{< meta quarto-types >}}/src/quarto-api.ts) for the full interface.
 
 #### Working with markdown
 
