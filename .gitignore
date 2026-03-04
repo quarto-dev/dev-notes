@@ -4,3 +4,5 @@ _site
 posts/etc
 
 /.luarc.json
+
+**/*.quarto_ipynb

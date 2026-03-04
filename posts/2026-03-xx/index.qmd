@@ -1,0 +1,428 @@
+---
+title: Quarto Engine Extensions
+author: Gordon Woodhull
+toc: true
+toc-depth: 3
+quarto-root: https://prerelease.quarto.org
+quarto-types: https://github.com/quarto-dev/quarto-cli/tree/main/packages/quarto-types
+---
+
+Quarto 1.9 introduces [engine extensions]({{< meta quarto-root >}}/docs/extensions/engine.html), TypeScript plugins that run code blocks and capture their output.
+
+Currently, there can be only one execution engine; see [Claiming a Language and Class](#claiming-a-language-and-class) to learn how the execution engine is chosen.
+
+Engine extensions are a very low-level mechanism, literally Markdown-in, Markdown-out. It's through the Quarto API that engine extensions get access to all the same tools that the built-in Jupyter and knitr execution engines use.[^1]
+
+## Status of Quarto API
+
+The Quarto API is likely to change significantly over the next year or two, so we're publishing this as a blog post to help developers get started, and will add formal documentation once it stabilizes.
+
+The `@quarto/types` package contains the TypeScript types for building an engine extension. 
+
+This package is not published on npm, but it's bundled with Quarto, and used when you run
+
+```bash
+quarto call build-ts-extensions
+```
+
+to build your extension.
+
+For reference, the source of `@quarto/types` is [on GitHub]({{< meta quarto-types >}}). Check the branches e.g. `v1.9` for the stable releases; main is unstable.
+
+## Getting started
+
+The easiest way to get started is with the scaffolding command:
+
+```bash
+quarto create extension engine
+```
+
+This creates a project with two pieces: an `_extension.yml` that declares the engine, and a TypeScript source file that implements it.
+
+### `_extension.yml`
+
+The extension metadata lives in [`_extensions/{name}/_extension.yml`]({{< meta quarto-root >}}/docs/extensions/). For an engine extension, the important part is `contributes.engines`:
+
+```yaml
+title: My Engine
+author: Your Name
+version: 0.1.0
+quarto-required: ">=1.9.0"
+contributes:
+  engines:
+    - path: my-engine.js
+```
+
+The `path` points to the compiled JavaScript file (built from your TypeScript source).
+
+### The TypeScript module
+
+Your engine is a TypeScript file that default-exports an [`ExecutionEngineDiscovery`](#executionenginediscovery) object:
+
+```ts
+import type { ExecutionEngineDiscovery, QuartoAPI } from "@quarto/types";
+
+let quarto: QuartoAPI;
+
+const myEngine: ExecutionEngineDiscovery = {
+  init: (quartoAPI: QuartoAPI) => {
+    quarto = quartoAPI;
+  },
+  name: "my-engine",
+  // ... discovery properties and launch()
+};
+
+export default myEngine;
+```
+
+## Engine discovery
+
+Quarto searches for `_extensions/` directories starting from the document's directory up to the project root. Three built-in engines — knitr, jupyter, and markdown — are always registered. The julia engine is also bundled with Quarto as a subtree extension, so it's automatically available without installation. External engines are registered alongside these, not instead of them.
+
+When Quarto finds an engine extension, it checks the `quarto-required` version, dynamically imports the compiled JS module, validates that it exports the required [`ExecutionEngineDiscovery`](#executionenginediscovery) properties (`name`, `launch`, `claimsLanguage`), and calls `init()` with the [Quarto API](#the-quarto-api). The engine is then ready to participate in language claiming.
+
+
+## Claiming a language and class
+
+Since only one engine can handle a document, Quarto needs to determine which one. It does this in two ways:
+
+1. **Explicit declaration** — if the YAML frontmatter specifies `engine: marimo`, that engine is used directly.
+2. **Language claiming** — otherwise, Quarto extracts the languages from code blocks and asks each engine whether it claims them.
+
+The `claimsLanguage` function returns `false` to pass, `true` to claim (with priority 1), or a number for a custom priority. The highest score wins.
+
+For an engine with its own language, this is straightforward:
+
+```ts
+claimsLanguage: (language: string) => language === "julia",
+```
+
+Things get more interesting when an engine extension wants to handle a language that a built-in engine already claims. Marimo cells are Python, but they shouldn't be executed by Jupyter. The `firstClass` parameter solves this — it passes the first class from the code block syntax, so `{python .marimo}` has `firstClass` of `"marimo"`:
+
+```ts
+claimsLanguage: (language: string, firstClass?: string): boolean | number => {
+  if (language === "python" && firstClass === "marimo") {
+    return 2; // higher priority than Jupyter's default claim
+  }
+  return false;
+},
+```
+
+If no engine claims any language, Quarto falls back to Jupyter for unrecognized computational languages, or to the markdown engine if there are no code blocks at all.
+
+Engines can also claim files by extension via `claimsFile(file, ext)` — this is how the Jupyter engine claims `.ipynb` files. Most engine extensions return `false` here and rely on `claimsLanguage` instead.
+
+
+
+## Execution
+
+Once an engine is chosen for a file, Quarto calls [`launch()`](#executionenginediscovery) with an [`EngineProjectContext`](#engineprojectcontext) to create an [`ExecutionEngineInstance`](#executionengineinstance), then calls `target()` and `execute()` on it.
+
+### `launch()`
+
+This is called for each file render. The [`EngineProjectContext`](#engineprojectcontext) gives you the project directory, configuration, and file caches. Your `launch()` returns an [`ExecutionEngineInstance`](#executionengineinstance) with all the methods Quarto will call during rendering.
+
+For simple engines, `launch()` just closes over the context. Julia uses it to set up its daemon server connection.
+
+### `target()`
+
+Quarto calls `target(file)` to create an `ExecutionTarget` for each file to be rendered:
+
+```ts
+interface ExecutionTarget {
+  source: string;       // original source file
+  input: string;        // input file (may differ from source)
+  markdown: MappedString; // content with source mapping
+  metadata: Metadata;   // parsed YAML frontmatter
+}
+```
+
+Most engines do the same thing here — read the file as a `MappedString` and extract its YAML. `MappedString` is a string that carries source location mapping so that error messages can point back to the right line in the original file. Use `quarto.mappedString.fromFile()` to create one.
+
+[`{{< include >}}` shortcodes]({{< meta quarto-root >}}/docs/authoring/includes.html) can appear inside code blocks to import code. Call `context.resolveFullMarkdownForFile()` here to expand them before `execute()` sees the document — see [`EngineProjectContext`](#engineprojectcontext). Both knitr and Jupyter do this.[^2]
+
+[^2]: Currently, neither marimo nor the Julia engine calls `resolveFullMarkdownForFile`.
+
+### `execute()`
+
+This is the core of your engine. It receives `ExecuteOptions` and returns `ExecuteResult`.
+
+The most important fields of `ExecuteOptions`:
+
+- `target` — the `ExecutionTarget` from above
+- `format` — the output format (HTML, PDF, etc.) with all its settings
+- `tempDir` — a temporary directory for intermediate files
+- `projectDir` — the project root, if applicable
+
+Other fields include `resourceDir`, `cwd`, `params`, `quiet`, `previewServer`, `handledLanguages`, and `project`. See [`@quarto/types`]({{< meta quarto-types >}}/src/execution.ts) for the full interface.
+
+The most important fields of `ExecuteResult`:
+
+- `markdown` — the processed markdown (this is the main output)
+- `supporting` — paths to supporting files like figures
+- `filters` — [pandoc filters]({{< meta quarto-root >}}/docs/extensions/filters.html) to apply
+- `includes` — content to inject into the document header, footer, etc.
+
+Other fields include `metadata`, `pandoc`, `engine`, `engineDependencies`, `preserve`, `postProcess`, and `resourceFiles`.
+
+The contract is **markdown in, markdown out**: your engine receives the source markdown through `target.markdown` and returns processed markdown with code blocks replaced by their output.
+
+### Execution patterns
+
+There are three patterns for implementing `execute()`:
+
+**Process cells in TypeScript** — use `quarto.markdownRegex.breakQuartoMd()` to split the document into cells, process your language's cells, and pass everything else through unchanged. This is what the scaffolding template uses, and probably what you want for a new engine.
+
+**Work in notebook format** — execute code through an external runtime that produces a Jupyter notebook, then convert to markdown with `quarto.jupyter.toMarkdown()`. This is what the built-in Jupyter engine does, and Julia follows the same pattern — the difference is just the execution backend (Julia's daemon server vs. a Jupyter kernel).
+
+**Delegate to an external runtime** — send the markdown and options to an external process that understands Quarto's `ExecuteResult` format and returns one directly. This is what knitr does — the actual knitting happens in R.
+
+Marimo uses a hybrid of the first and third patterns: it sends the whole document to a Python script for parsing and execution, then uses `breakQuartoMd()` on the TypeScript side to match each cell with its corresponding output and reassemble the markdown.
+
+### Working with cells
+
+For the cell-by-cell pattern, `breakQuartoMd()` splits the document into cells that are either markdown or code blocks. You process the ones in your language and pass everything else through unchanged:
+
+```ts
+execute: async (options: ExecuteOptions): Promise<ExecuteResult> => {
+  const chunks = await quarto.markdownRegex.breakQuartoMd(
+    options.target.markdown,
+  );
+
+  const processedCells: string[] = [];
+  for (const cell of chunks.cells) {
+    if (
+      typeof cell.cell_type === "object" &&
+      cell.cell_type.language === "my-language"
+    ) {
+      // execute the cell, produce output markdown
+      const output = await runMyLanguage(cell.source.value);
+      processedCells.push(output);
+    } else {
+      // pass through unchanged
+      processedCells.push(cell.sourceVerbatim.value);
+    }
+  }
+
+  return {
+    engine: "my-engine",
+    markdown: processedCells.join(""),
+    supporting: [],
+    filters: [],
+  };
+},
+```
+
+### Supporting files and includes
+
+If your engine produces figures or other files, return their paths in the `supporting` array so Quarto can copy them alongside the output.
+
+For content that needs to go in the HTML `<head>` or elsewhere in the document, use `includes`. Marimo uses this to inject its reactive UI header:
+
+```ts
+const tempFile = Deno.makeTempFileSync({ dir: options.tempDir, suffix: ".html" });
+Deno.writeTextFileSync(tempFile, headerHtml);
+return {
+  // ...
+  includes: { "include-in-header": [tempFile] },
+};
+```
+
+### `dependencies()` and `postprocess()`
+
+These are part of the `ExecutionEngineInstance` interface but are usually no-ops for engine extensions. `dependencies()` returns empty includes; `postprocess()` resolves immediately. The built-in engines use `postprocess()` for internal concerns like restoring preserved HTML.
+
+
+
+## CLI integration
+
+Engine extensions can optionally implement two CLI commands.
+
+### `quarto check <engine-name>`
+
+If your engine implements `checkInstallation(conf)`, users can run `quarto check <engine-name>` to verify that the engine's runtime is installed and working. The `conf` object provides output helpers for formatting check results. The built-in Jupyter and knitr engines check that their runtimes are installed, report capabilities, and perform a test render of a simple document via `quarto.system.checkRender()`.
+
+### `quarto call engine <engine-name>`
+
+If your engine implements `populateCommand(command)`, it can register subcommands under `quarto call engine <engine-name>`. The `command` parameter is a [Cliffy](https://cliffy.io/) `Command` object that you populate with subcommands.
+
+Julia uses this to expose daemon management commands like `quarto call engine julia status` and `quarto call engine julia stop`. Engines that don't run a persistent process are less likely to need custom commands.
+
+## Conclusion
+
+If you've made it this far, you now know the full lifecycle of a Quarto engine extension: discovery, claiming, execution, and CLI integration.
+
+That's enough to get building — start with `quarto create extension engine` and look at the [marimo](https://github.com/marimo-team/quarto-marimo) and [Julia](https://github.com/gordonwoodhull/quarto-julia-engine) engines for real-world examples.
+
+The rest of this post is a summary of the Quarto API interfaces and namespaces, to consult as needed. 
+
+We're excited to see what engines people build. Share what you're working on or ask questions in a [discussion](https://github.com/quarto-dev/quarto-cli/discussions?discussions_q=label%3Aengine-extensions).
+
+## The Quarto API
+
+This blog post will cover only the core engine and project interfaces:
+
+`ExecutionEngineDiscovery`
+: Properties and methods Quarto uses to choose an execution engine
+
+`ExecutionEngineInstance`
+: The running execution engine for a file render
+
+`EngineProjectContext`
+: The context passed to an engine instance
+
+Afterward, we'll briefly summarize the [API namespaces](#api-namespaces).
+
+### Interfaces
+
+#### `ExecutionEngineDiscovery`
+
+This is the top-level interface your engine exports as its default export. It handles everything that doesn't require a project context. See [`@quarto/types`]({{< meta quarto-types >}}/src/execution-engine.ts) for the full interface.
+
+`name`
+: Identifies the engine, used in YAML frontmatter (`engine: marimo`) and CLI commands.
+
+`init?(quarto)`
+: Receives the [Quarto API](#the-quarto-api) at registration time. See [Engine discovery](#engine-discovery).
+
+`claimsLanguage(language, firstClass?)`
+: Determines which code blocks your engine handles. See [Claiming a language and class](#claiming-a-language-and-class).
+
+`claimsFile(file, ext)`
+: Claims files by path or extension. See [Claiming a language and class](#claiming-a-language-and-class).
+
+`launch(context)`
+: Creates an [`ExecutionEngineInstance`](#executionengineinstance) for a file render. See [Execution](#execution).
+
+`defaultExt`
+: Default file extension for new files (typically `".qmd"`).
+
+`defaultYaml()`
+: Default YAML frontmatter lines for `quarto create extension engine`.
+
+`defaultContent()`
+: Default code block content for `quarto create extension engine`.
+
+`validExtensions()`
+: File extensions this engine supports beyond `.qmd` — for example, Jupyter returns `[".ipynb"]`. Most engine extensions return `[]`.
+
+`canFreeze`
+: Whether your engine supports [freezing]({{< meta quarto-root >}}/docs/projects/code-execution.html#freeze) (caching execution results so they aren't re-run).
+
+`generatesFigures`
+: Whether your engine produces figure output.
+
+The remaining methods are optional.
+
+`ignoreDirs?()`
+: Directories that Quarto should skip when crawling the project. Most engines don't need this.
+
+`quartoRequired?`
+: A Quarto version constraint as a semver range (e.g., `">=1.9.0"`, `"^1.9.0"`, or `">=1.9.0 <2.0.0"`). Also set in `_extension.yml`.
+
+`populateCommand?(command)`
+: Registers subcommands for `quarto call engine <name>`. See [CLI integration](#cli-integration).
+
+`checkInstallation?(conf)`
+: Validates the engine's runtime for `quarto check <name>`. See [CLI integration](#cli-integration).
+
+
+
+#### `ExecutionEngineInstance`
+
+This is the object returned by `launch()` for each file render. It does the actual work of rendering a document. See [`@quarto/types`]({{< meta quarto-types >}}/src/execution-engine.ts) for the full interface.
+
+`name`
+: Engine name, repeated from `ExecutionEngineDiscovery`.
+
+`canFreeze`
+: Freezing support, repeated from `ExecutionEngineDiscovery`.
+
+`markdownForFile(file)`
+: Reads a source file as a `MappedString`. Most engines just call `quarto.mappedString.fromFile(file)`. Knitr overrides this to handle `.R` spin scripts.
+
+`target(file, quiet?, markdown?)`
+: Creates an `ExecutionTarget` for the file. See [Execution](#execution).
+
+`partitionedMarkdown(file, format?)`
+: Splits a file into its YAML frontmatter, heading, and body content. Quarto uses this for project indexing and navigation, not during execution itself.
+
+`execute(options)`
+: The core render method. See [Execution](#execution).
+
+`dependencies(options)`
+: Returns pandoc includes. Usually a no-op for engine extensions. See [Execution](#execution).
+
+`postprocess(options)`
+: Post-render cleanup. Usually a no-op for engine extensions. See [Execution](#execution).
+
+The remaining methods are optional.
+
+`filterFormat?(source, options, format)`
+: Modifies the output format before execution. Jupyter uses this to disable execution for `.ipynb` files by default.
+
+`executeTargetSkipped?(target, format)`
+: Called when Quarto skips execution for a file (e.g., because it's frozen). Jupyter uses this to clean up transient notebooks.
+
+`canKeepSource?(target)`
+: Whether Quarto can preserve the original source alongside the output.
+
+`intermediateFiles?(input)`
+: Paths to intermediate files the engine creates during execution, so Quarto can track them.
+
+`run?(options)`
+: Supports interactive execution — this is how Shiny documents are served.
+
+`postRender?(file)`
+: Called after the final output file has been written.
+
+
+
+#### `EngineProjectContext`
+
+This is a restricted view of Quarto's project context, passed to `launch()`. See [`@quarto/types`]({{< meta quarto-types >}}/src/project-context.ts) for the full interface. 
+
+We won't cover every field here — `dir`, `isSingleFile`, `config`, `getOutputDirectory()`, and `fileInformationCache` are mostly self-explanatory. But one method requires explanation.
+
+`resolveFullMarkdownForFile(engine, file, markdown?, force?)`
+: `{{< include >}}` shortcodes can appear inside code blocks to import code. The engine needs these expanded before execution, otherwise it will try to execute the raw shortcode text. A Lua filter later in the Pandoc pipeline also handles includes (including ones emitted by code execution), but that runs after the engine. This method expands all `{{< include >}}` shortcodes in the source document before the engine sees it.
+
+: It reads the file (using `engine.markdownForFile()` if provided), breaks it into cells, scans every cell for `{{< include >}}` shortcodes, and replaces each one with the content of the referenced file. The result is a `MappedString` with all includes expanded and source locations preserved. Results are cached in `fileInformationCache` unless `force` is true.
+
+: See [`target()`](#target) for usage.
+
+
+
+### API namespaces
+
+The `QuartoAPI` object received in `init()` provides nine namespaces. See [`@quarto/types`]({{< meta quarto-types >}}/src/quarto-api.ts) for the full interface.
+
+#### Working with markdown
+
+`markdownRegex` is the primary tool for parsing Quarto documents. `breakQuartoMd()` splits a document into cells for the [cell-by-cell execution pattern](#working-with-cells). `extractYaml()` parses YAML frontmatter, used in [`target()`](#target). `partition()` splits markdown into YAML, heading, and body sections. There are also methods for extracting languages and classes from code blocks.
+
+`mappedString` creates and manipulates `MappedString` values — strings that carry source location mapping for error reporting. `fromFile()` is the main entry point, used in [`target()`](#target) to read source files. There are also methods for creating mapped strings from plain text, splitting into lines, and converting between offsets and line/column coordinates.
+
+#### Understanding the output
+
+`format` provides boolean checks for the output format: HTML, LaTeX, markdown, presentation, notebook, dashboard, and Shiny. These are useful when your engine needs to produce format-sensitive output — for example, emitting raw HTML for web output but images for PDF.
+
+`jupyter` provides Jupyter notebook utilities. Engines using the [notebook execution pattern](#execution-patterns) will use `toMarkdown()` to convert executed notebooks to markdown, along with `assets()` for figure paths and methods for handling widget dependencies. There are also methods for detecting notebook files, working with kernelspecs, converting between formats, and checking Jupyter capabilities.
+
+#### Interacting with the outside world
+
+`system` provides `execProcess()` for running external commands, `pandoc()` for invoking pandoc directly, and `checkRender()` for [test renders during installation checks](#quarto-check-engine-name). It also provides environment detection (`isInteractiveSession()`, `runningInCI()`), cleanup handlers, temporary file management, and preview server support.
+
+`console` provides user-facing output: `withSpinner()` for long operations, `info()`, `warning()`, and `error()` for logging.
+
+#### Utilities
+
+`path` provides file path helpers: absolute path resolution, platform-specific runtime and data directories, resource file paths, and the conventional `{stem}_files` supporting directory name.
+
+`text` provides string manipulation: line splitting, empty line trimming, YAML serialization, line/column coordinate conversion, and `postProcessRestorePreservedHtml()` for engines that need post-processing.
+
+`crypto` provides `md5Hash()`.
+
+
+
+[^1]: A long-term goal is to be able to move the execution engines out of the quarto-cli core.
