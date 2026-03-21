@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>Summary so far – Dev notes for Quarto</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -32,19 +35,18 @@ ul.task-list li input[type="checkbox"] {
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-4d9afe2b8d18ee9fa5d0d57b5ed4214d.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-f418161beb48e0141c760e455f12af2c.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-626fdbf59456e5b7d1a23a627513982c.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-dark-5c5b421fdc52246bcb53b6ca89c31823.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-626fdbf59456e5b7d1a23a627513982c.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-ccd8b63cce074f779832714f33d1fc94.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-dark-6a5f46e962e412257f5ffdf4af3fb027.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-ccd8b63cce074f779832714f33d1fc94.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="dark">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -155,23 +157,23 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
 </div>
 <div class="cell">
 <div class="cell-output-display">
-<div id="gyavfxdovt" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#gyavfxdovt table {
+<div id="gfvzgqrduh" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#gfvzgqrduh table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#gyavfxdovt thead, #gyavfxdovt tbody, #gyavfxdovt tfoot, #gyavfxdovt tr, #gyavfxdovt td, #gyavfxdovt th {
+#gfvzgqrduh thead, #gfvzgqrduh tbody, #gfvzgqrduh tfoot, #gfvzgqrduh tr, #gfvzgqrduh td, #gfvzgqrduh th {
   border-style: none;
 }
 
-#gyavfxdovt p {
+#gfvzgqrduh p {
   margin: 0;
   padding: 0;
 }
 
-#gyavfxdovt .gt_table {
+#gfvzgqrduh .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -197,12 +199,12 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-left-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_caption {
+#gfvzgqrduh .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#gyavfxdovt .gt_title {
+#gfvzgqrduh .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -214,7 +216,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-bottom-width: 0;
 }
 
-#gyavfxdovt .gt_subtitle {
+#gfvzgqrduh .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -226,7 +228,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-top-width: 0;
 }
 
-#gyavfxdovt .gt_heading {
+#gfvzgqrduh .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -238,13 +240,13 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-right-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_bottom_border {
+#gfvzgqrduh .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_col_headings {
+#gfvzgqrduh .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -259,7 +261,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-right-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_col_heading {
+#gfvzgqrduh .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -279,7 +281,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   overflow-x: hidden;
 }
 
-#gyavfxdovt .gt_column_spanner_outer {
+#gfvzgqrduh .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -291,15 +293,15 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   padding-right: 4px;
 }
 
-#gyavfxdovt .gt_column_spanner_outer:first-child {
+#gfvzgqrduh .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#gyavfxdovt .gt_column_spanner_outer:last-child {
+#gfvzgqrduh .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#gyavfxdovt .gt_column_spanner {
+#gfvzgqrduh .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -311,11 +313,11 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   width: 100%;
 }
 
-#gyavfxdovt .gt_spanner_row {
+#gfvzgqrduh .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#gyavfxdovt .gt_group_heading {
+#gfvzgqrduh .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -341,7 +343,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   text-align: left;
 }
 
-#gyavfxdovt .gt_empty_group_heading {
+#gfvzgqrduh .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -356,15 +358,15 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   vertical-align: middle;
 }
 
-#gyavfxdovt .gt_from_md > :first-child {
+#gfvzgqrduh .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#gyavfxdovt .gt_from_md > :last-child {
+#gfvzgqrduh .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#gyavfxdovt .gt_row {
+#gfvzgqrduh .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -383,7 +385,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   overflow-x: hidden;
 }
 
-#gyavfxdovt .gt_stub {
+#gfvzgqrduh .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -396,7 +398,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   padding-right: 5px;
 }
 
-#gyavfxdovt .gt_stub_row_group {
+#gfvzgqrduh .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -410,15 +412,15 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   vertical-align: top;
 }
 
-#gyavfxdovt .gt_row_group_first td {
+#gfvzgqrduh .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#gyavfxdovt .gt_row_group_first th {
+#gfvzgqrduh .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#gyavfxdovt .gt_summary_row {
+#gfvzgqrduh .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -428,16 +430,16 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   padding-right: 5px;
 }
 
-#gyavfxdovt .gt_first_summary_row {
+#gfvzgqrduh .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_first_summary_row.thick {
+#gfvzgqrduh .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#gyavfxdovt .gt_last_summary_row {
+#gfvzgqrduh .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -447,7 +449,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-bottom-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_grand_summary_row {
+#gfvzgqrduh .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -457,7 +459,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   padding-right: 5px;
 }
 
-#gyavfxdovt .gt_first_grand_summary_row {
+#gfvzgqrduh .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -467,7 +469,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-top-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_last_grand_summary_row_top {
+#gfvzgqrduh .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -477,11 +479,11 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-bottom-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_striped {
+#gfvzgqrduh .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#gyavfxdovt .gt_table_body {
+#gfvzgqrduh .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -490,7 +492,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-bottom-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_footnotes {
+#gfvzgqrduh .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -504,7 +506,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-right-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_footnote {
+#gfvzgqrduh .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -513,7 +515,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   padding-right: 5px;
 }
 
-#gyavfxdovt .gt_sourcenotes {
+#gfvzgqrduh .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -527,7 +529,7 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   border-right-color: #D3D3D3;
 }
 
-#gyavfxdovt .gt_sourcenote {
+#gfvzgqrduh .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -535,72 +537,72 @@ Figure&nbsp;1: The total runtime of <code>quarto render</code> on <code>quarto-d
   padding-right: 5px;
 }
 
-#gyavfxdovt .gt_left {
+#gfvzgqrduh .gt_left {
   text-align: left;
 }
 
-#gyavfxdovt .gt_center {
+#gfvzgqrduh .gt_center {
   text-align: center;
 }
 
-#gyavfxdovt .gt_right {
+#gfvzgqrduh .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#gyavfxdovt .gt_font_normal {
+#gfvzgqrduh .gt_font_normal {
   font-weight: normal;
 }
 
-#gyavfxdovt .gt_font_bold {
+#gfvzgqrduh .gt_font_bold {
   font-weight: bold;
 }
 
-#gyavfxdovt .gt_font_italic {
+#gfvzgqrduh .gt_font_italic {
   font-style: italic;
 }
 
-#gyavfxdovt .gt_super {
+#gfvzgqrduh .gt_super {
   font-size: 65%;
 }
 
-#gyavfxdovt .gt_footnote_marks {
+#gfvzgqrduh .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#gyavfxdovt .gt_asterisk {
+#gfvzgqrduh .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#gyavfxdovt .gt_indent_1 {
+#gfvzgqrduh .gt_indent_1 {
   text-indent: 5px;
 }
 
-#gyavfxdovt .gt_indent_2 {
+#gfvzgqrduh .gt_indent_2 {
   text-indent: 10px;
 }
 
-#gyavfxdovt .gt_indent_3 {
+#gfvzgqrduh .gt_indent_3 {
   text-indent: 15px;
 }
 
-#gyavfxdovt .gt_indent_4 {
+#gfvzgqrduh .gt_indent_4 {
   text-indent: 20px;
 }
 
-#gyavfxdovt .gt_indent_5 {
+#gfvzgqrduh .gt_indent_5 {
   text-indent: 25px;
 }
 
-#gyavfxdovt .katex-display {
+#gfvzgqrduh .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#gyavfxdovt div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#gfvzgqrduh div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
