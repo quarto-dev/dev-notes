@@ -313,7 +313,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  metadata<span class="op">:</span> Metadata<span class="op">;</span>   <span class="co">// parsed YAML frontmatter</span></span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Most engines do the same thing here — read the file as a <code>MappedString</code> and extract its YAML. <code>MappedString</code> is a string that carries source location mapping so that error messages can point back to the right line in the original file. Use <code>quarto.mappedString.fromFile()</code> to create one.</p>
-<p><a href="https://quarto.org/docs/authoring/includes.html"><code>{{&lt; include &gt;}}</code> shortcodes</a> can appear inside code blocks to import code. Call <code>context.resolveFullMarkdownForFile()</code> here to expand them before <code>execute()</code> sees the document — see <a href="#engineprojectcontext"><code>EngineProjectContext</code></a>. Both knitr and Jupyter do this.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+<p>The <code>markdown</code> parameter is pre-expanded by Quarto before <code>target()</code> is called: all <a href="https://quarto.org/docs/authoring/includes.html"><code>{{&lt; include &gt;}}</code> shortcodes</a> in code blocks have already been resolved. Use <code>markdown</code> directly (or fall back to <code>quarto.mappedString.fromFile(file)</code> if it is <code>undefined</code>).</p>
+<p>The main work of <code>target()</code> is establishing the <code>input</code> file — which may differ from <code>source</code>. Jupyter creates a transient <code>.quarto_ipynb</code> notebook from a <code>.qmd</code> source and sets <code>input</code> to that path. For most engine extensions <code>source === input</code>. Any engine-specific setup data (such as the resolved kernelspec for Jupyter) can be stashed in the optional <code>data</code> field of <code>ExecutionTarget</code> for <code>execute()</code> to pick up later.</p>
 </section>
 <section id="execute" class="level3">
 <h3 class="anchored" data-anchor-id="execute"><code>execute()</code></h3>
@@ -568,19 +569,7 @@ Called after the final output file has been written.
 <section id="engineprojectcontext" class="level4">
 <h4 class="anchored" data-anchor-id="engineprojectcontext"><code>EngineProjectContext</code></h4>
 <p>This is a restricted view of Quarto’s project context, passed to <code>launch()</code>. See <a href="https://github.com/quarto-dev/quarto-cli/tree/main/packages/quarto-types/src/project-context.ts"><code>@quarto/types</code></a> for the full interface.</p>
-<p>We won’t cover every field here — <code>dir</code>, <code>isSingleFile</code>, <code>config</code>, <code>getOutputDirectory()</code>, and <code>fileInformationCache</code> are mostly self-explanatory. But one method requires explanation.</p>
-<dl>
-<dt><code>resolveFullMarkdownForFile(engine, file, markdown?, force?)</code></dt>
-<dd>
-<code>{{&lt; include &gt;}}</code> shortcodes can appear inside code blocks to import code. The engine needs these expanded before execution, otherwise it will try to execute the raw shortcode text. A Lua filter later in the Pandoc pipeline also handles includes (including ones emitted by code execution), but that runs after the engine. This method expands all <code>{{&lt; include &gt;}}</code> shortcodes in the source document before the engine sees it.
-</dd>
-<dd>
-It reads the file (using <code>engine.markdownForFile()</code> if provided), breaks it into cells, scans every cell for <code>{{&lt; include &gt;}}</code> shortcodes, and replaces each one with the content of the referenced file. The result is a <code>MappedString</code> with all includes expanded and source locations preserved. Results are cached in <code>fileInformationCache</code> unless <code>force</code> is true.
-</dd>
-<dd>
-See <a href="#target"><code>target()</code></a> for usage.
-</dd>
-</dl>
+<p>The fields are mostly self-explanatory: <code>dir</code>, <code>isSingleFile</code>, <code>config</code>, <code>getOutputDirectory()</code>, <code>fileInformationCache</code>, and <code>resolveFullMarkdownForFile()</code>. The last one is Quarto’s internal mechanism for expanding <a href="https://quarto.org/docs/authoring/includes.html"><code>{{&lt; include &gt;}}</code></a> shortcodes — it is called automatically before <code>target()</code>, so engine extensions don’t normally need to call it.</p>
 </section>
 </section>
 <section id="api-namespaces" class="level3">
@@ -617,7 +606,6 @@ See <a href="#target"><code>target()</code></a> for usage.
 
 <ol>
 <li id="fn1"><p>A long-term goal is to be able to move the execution engines out of the quarto-cli core.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>Currently, neither marimo nor the Julia engine calls <code>resolveFullMarkdownForFile</code>.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
