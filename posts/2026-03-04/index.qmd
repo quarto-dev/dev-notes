@@ -140,9 +140,9 @@ interface ExecutionTarget {
 
 Most engines do the same thing here — read the file as a `MappedString` and extract its YAML. `MappedString` is a string that carries source location mapping so that error messages can point back to the right line in the original file. Use `quarto.mappedString.fromFile()` to create one.
 
-[`{{< include >}}` shortcodes]({{< meta quarto-root >}}/docs/authoring/includes.html) can appear inside code blocks to import code. Call `context.resolveFullMarkdownForFile()` here to expand them before `execute()` sees the document — see [`EngineProjectContext`](#engineprojectcontext). Both knitr and Jupyter do this.[^2]
+The `markdown` parameter is pre-expanded by Quarto before `target()` is called: all [`{{< include >}}` shortcodes]({{< meta quarto-root >}}/docs/authoring/includes.html) in code blocks have already been resolved. Use `markdown` directly (or fall back to `quarto.mappedString.fromFile(file)` if it is `undefined`).
 
-[^2]: Currently, neither marimo nor the Julia engine calls `resolveFullMarkdownForFile`.
+The main work of `target()` is establishing the `input` file — which may differ from `source`. Jupyter creates a transient `.quarto_ipynb` notebook from a `.qmd` source and sets `input` to that path. For most engine extensions `source === input`. Any engine-specific setup data (such as the resolved kernelspec for Jupyter) can be stashed in the optional `data` field of `ExecutionTarget` for `execute()` to pick up later.
 
 ### `execute()`
 
@@ -383,14 +383,7 @@ The remaining methods are optional.
 
 This is a restricted view of Quarto's project context, passed to `launch()`. See [`@quarto/types`]({{< meta quarto-types >}}/src/project-context.ts) for the full interface. 
 
-We won't cover every field here — `dir`, `isSingleFile`, `config`, `getOutputDirectory()`, and `fileInformationCache` are mostly self-explanatory. But one method requires explanation.
-
-`resolveFullMarkdownForFile(engine, file, markdown?, force?)`
-: `{{< include >}}` shortcodes can appear inside code blocks to import code. The engine needs these expanded before execution, otherwise it will try to execute the raw shortcode text. A Lua filter later in the Pandoc pipeline also handles includes (including ones emitted by code execution), but that runs after the engine. This method expands all `{{< include >}}` shortcodes in the source document before the engine sees it.
-
-: It reads the file (using `engine.markdownForFile()` if provided), breaks it into cells, scans every cell for `{{< include >}}` shortcodes, and replaces each one with the content of the referenced file. The result is a `MappedString` with all includes expanded and source locations preserved. Results are cached in `fileInformationCache` unless `force` is true.
-
-: See [`target()`](#target) for usage.
+The fields are mostly self-explanatory: `dir`, `isSingleFile`, `config`, `getOutputDirectory()`, `fileInformationCache`, and `resolveFullMarkdownForFile()`. The last one is Quarto's internal mechanism for expanding [`{{< include >}}`]({{< meta quarto-root >}}/docs/authoring/includes.html) shortcodes — it is called automatically before `target()`, so engine extensions don't normally need to call it.
 
 
 
